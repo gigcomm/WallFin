@@ -1,0 +1,174 @@
+from aiogram.types import CallbackQuery
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from database.orm_query import orm_add_currency, orm_delete_currency, orm_get_currency, orm_update_currency
+from tg_bot.handlers.common_imports import *
+from parsers.parser_currency_rate import get_exchange_rate
+from tg_bot.keyboards.inline import get_callback_btns
+
+currency_router = Router()
+
+
+# @currency_router.callback_query(lambda callback_query: callback_query.data.startswith("currencies_"))
+# async def process_currency_action(callback_query: CallbackQuery, session: AsyncSession):
+#     bank_id = int(callback_query.data.split("_")[-1])
+#
+#     currencies = await orm_get_currency(session, bank_id)
+#     # if not currencies:
+#     #     await callback_query.message.edit_text(
+#     #         "В этом банке пока нет валют. Добавьте валюту:",
+#     #         reply_markup=get_callback_btns(btns={"Добавить валюту": f"add_currency:{bank_id}"})
+#     #     )
+#     # else:
+#     buttons = {currency.name: str(currency.id) for currency in currencies}
+#     buttons["Добавить валюту"] = f"add_currency_{bank_id}"
+#
+#     await callback_query.message.edit_text(
+#         "Выберете валюту:",
+#         reply_markup=get_callback_btns(btns=buttons)
+#     )
+#
+#     await callback_query.answer()
+
+
+class AddCurrency(StatesGroup):
+    currency_id = State()
+    bank_id = State()
+    name = State()
+    balance = State()
+    market_price = State()
+
+    currency_for_change = None
+    texts = {
+        'AddCurrency:name': 'Введите название заново',
+        'AddCurrency:balance': 'Введите баланс заново',
+        'AddCurrency:market_price': 'Это последний стейт...'
+    }
+
+
+# @currency_router.callback_query(F.data.startswith('delete_'))
+# async def delete_currency(callback: types.CallbackQuery, session: AsyncSession):
+#     currency_id = callback.data.split("_")[-1]
+#     await orm_delete_currency(session, int(currency_id))
+#
+#     await callback.answer("Валюта удалена")
+#     await callback.message.answer("Валюта удалена")
+
+
+@currency_router.callback_query(StateFilter(None), F.data.startswith("change_currency"))
+async def change_currency(callback: types.CallbackQuery, state: FSMContext, session: AsyncSession):
+    currency_id = callback.data.split(":")[-1]
+    await state.update_data(currency_id=currency_id)
+    currency_for_change = await orm_get_currency(session, int(currency_id))
+
+    AddCurrency.currency_for_change = currency_for_change
+
+    await callback.answer()
+    await callback.message.answer("Введите название валюты, например USD")
+    await state.set_state(AddCurrency.name)
+
+
+@currency_router.callback_query(StateFilter(None), F.data.startswith("add_currency"))
+async def add_currency(callback_query: CallbackQuery, state: FSMContext):
+    bank_id = int(callback_query.data.split(':')[-1])
+    await state.update_data(bank_id=bank_id)
+    await (callback_query.message.answer(
+        "Введите название валюты, например USD", reply_markup=types.ReplyKeyboardRemove()
+    ))
+    await state.set_state(AddCurrency.name)
+
+
+@currency_router.message(StateFilter('*'), Command("отмена валюта"))
+@currency_router.message(StateFilter('*'), F.text.casefold() == "отмена валюта")
+async def cancel_handler(message: types.Message, state: FSMContext) -> None:
+    current_state = await state.get_state()
+    if current_state is None:
+        return
+    if AddCurrency.currency_for_change:
+        AddCurrency.currency_for_change = None
+    await state.clear()
+    await message.answer("Действия отменены")
+
+
+@currency_router.message(StateFilter('*'), Command("назад валюта"))
+@currency_router.message(StateFilter('*'), F.text.casefold() == "назад валюта")
+async def back_handler(message: types.Message, state: FSMContext) -> None:
+    current_state = await state.get_state()
+    if current_state is None:
+        await message.answer("Предыдущего шага нет, введите название валюты или напишите 'отмена'")
+        return
+
+    previous = None
+    for step in AddCurrency.__all_states__:
+        if step.state == current_state:
+            await state.set_state(previous)
+            await message.answer(f"Вы вернулись к прошлому шагу \n {AddCurrency.texts[previous.state]}")
+            return
+        previous = step
+
+
+@currency_router.message(AddCurrency.name, F.text)
+async def add_name(message: types.Message, state: FSMContext):
+    if message.text == '.' and AddCurrency.currency_for_change:
+        await state.update_data(name=AddCurrency.currency_for_change.name)
+    else:
+        if len(message.text) >= 150:
+            await message.answer(
+                "Название валюты не должно превышать 150 символов. \n Введите заново"
+            )
+            return
+        await state.update_data(name=message.text.casefold())
+    await message.answer("Введите количество валюты на балансе")
+    await state.set_state(AddCurrency.balance)
+
+
+@currency_router.message(AddCurrency.balance, F.text)
+async def add_balance(message: types.Message, state: FSMContext):
+    if message.text == '.' and AddCurrency.currency_for_change:
+        await state.update_data(balance=AddCurrency.currency_for_change.balance)
+    else:
+        await state.update_data(balance=message.text)
+    await message.answer(
+        "Введите курс данной валюты или определите его автоматичекси, написав слово 'авто' в поле ввода")
+    await state.set_state(AddCurrency.market_price)
+
+
+@currency_router.message(AddCurrency.market_price, F.text)
+async def add_market_price(message: types.Message, state: FSMContext, session: AsyncSession):
+    data = await state.get_data()
+    currency_name = data['name']
+
+    if message.text == '.' and AddCurrency.currency_for_change:
+        await state.update_data(market_price=AddCurrency.currency_for_change.market_price)
+    else:
+        market_price = message.text
+        if market_price.casefold() == 'авто':
+            try:
+                auto_market_price = get_exchange_rate(currency_name, 'RUB')
+                await state.update_data(market_price=auto_market_price)
+                await message.answer(f"Курс {currency_name} к RUB автоматически установлен: {market_price}")
+            except Exception as e:
+                await message.answer(f"Не удалось получить курс валюты: {e}")
+                return
+        else:
+            try:
+                market_price = float(market_price)
+                await state.update_data(market_price=market_price)
+            except ValueError:
+                await message.answer("Введите корректное числовое значение для курса валюты.")
+                return
+
+    data = await state.get_data()
+    try:
+        if AddCurrency.currency_for_change:
+            await orm_update_currency(session, data["currency_id"], data)
+        else:
+            await orm_add_currency(session, data)
+        await message.answer("Валюта добалена/изменена")
+        await state.clear()
+
+    except Exception as e:
+        await message.answer(f"Ошибка {e}, обратитесь к @gigcomm, чтобы исправить ее!")
+        await state.clear()
+
+    AddCurrency.currency_for_change = None
