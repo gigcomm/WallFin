@@ -8,13 +8,13 @@ class MarketLogic(ABC):
 
 
 class StockMarketLogic(MarketLogic):
-    def __init__(self, shares, funds,name):
+    def __init__(self, shares, funds, name):
         super().__init__(name)
         self.shares = shares
         self.funds = funds
 
 
-class Share:
+class ShareLogic:
     def __init__(self, share_name, purchase_price, selling_price, market_price, quantity):
         self.share_name = share_name
         self.purchase_price = purchase_price
@@ -41,7 +41,7 @@ class FundLogic:
 
 
 class CryptoMarketLogic(MarketLogic):
-    def __init__(self, cryptocurrencies,name):
+    def __init__(self, cryptocurrencies, name):
         super().__init__(name)
         self.cryptocurrencies = cryptocurrencies
 
