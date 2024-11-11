@@ -1,8 +1,11 @@
+from locale import currency
+
 from sqlalchemy import Text, Float, Integer, String, BigInteger, Date, DECIMAL, ForeignKey
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
-from finance.bank import BankLogic
-from finance.market import StockMarketLogic, CryptoMarketLogic
+from finance.bank import BankLogic, AccountLogic, CurrencyLogic, DepositLogic
+from finance.market import StockMarketLogic, CryptoMarketLogic, ShareLogic, FundLogic, СryptocurrencyLogic
+from tg_bot.handlers.menu_processing import accounts, deposits, cryptocurrencies
 
 
 class Base(DeclarativeBase):
@@ -41,7 +44,13 @@ class Bank(Base):
     deposit: Mapped[list["Deposit"]] = relationship(back_populates="bank")
 
     def to_logic(self):
-        return BankLogic(bank_name=self.name, accounts=self.account, currencies=self.currency, deposits=self.deposit)
+        account_logic = [AccountLogic(account.name, account.balance)
+                         for account in self.account]
+        currency_logic = [CurrencyLogic(currency.name, currency.balance, currency.market_price)
+                          for currency in self.currency]
+        deposit_logic = [DepositLogic(deposit.name, deposit.start_date, deposit.deposit_term, deposit.interest_rate,
+                                      deposit.deposit_balance) for deposit in self.deposit]
+        return BankLogic(bank_name=self.name, accounts=account_logic, currencies=currency_logic, deposits=deposit_logic)
 
 
 class Account(Base):
@@ -90,7 +99,13 @@ class StockMarket(Base):
     fund: Mapped[list["Fund"]] = relationship(back_populates="stockmarket")
 
     def to_logic(self):
-        return StockMarketLogic(name=self.name, shares=self.share, funds=self.fund)
+        share_logic = [
+            ShareLogic(share.name, share.purchase_price, share.selling_price, share.market_price, share.quantity)
+            for share in self.share]
+        fund_logic = [
+            FundLogic(fund.name, fund.purchase_price, fund.selling_price, fund.market_price, fund.quantity)
+            for fund in self.fund]
+        return StockMarketLogic(name=self.name, shares=share_logic, funds=fund_logic)
 
 
 class Share(Base):
@@ -130,7 +145,10 @@ class CryptoMarket(Base):
     cryptocurrency: Mapped[list["Cryptocurrency"]] = relationship(back_populates="cryptomarket")
 
     def to_logic(self):
-        return CryptoMarketLogic(name=self.name, cryptocurrencies=self.cryptocurrency)
+        cryptocurrency_logic = [
+            СryptocurrencyLogic(cryptocur.name, cryptocur.balance, cryptocur.purchase_price, cryptocur.selling_price,
+                                cryptocur.market_price) for cryptocur in self.cryptocurrency]
+        return CryptoMarketLogic(name=self.name, cryptocurrencies=cryptocurrency_logic)
 
 
 class Cryptocurrency(Base):

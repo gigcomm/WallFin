@@ -116,7 +116,7 @@ async def add_name(message: types.Message, state: FSMContext):
             )
             return
         await state.update_data(name=message.text)
-    await message.answer("Введите дату начала вклада в формате xx.xx.20xx")
+    await message.answer("Введите дату начала вклада в формате ДД.ММ.ГГ.")
     await state.set_state(AddDeposit.start_date)
 
 

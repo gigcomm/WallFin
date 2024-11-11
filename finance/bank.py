@@ -6,15 +6,6 @@ class BankLogic:
         self.deposits = deposits
         # self.credit = None
 
-    # def add_account(self, account):
-    #     self.accounts_balance.append(account)
-    #
-    # def add_currency(self, currency):
-    #     self.currencies_balance.append(currency)
-    #
-    # def add_deposit(self, deposit):
-    #     self.deposits_balance.append(deposit)
-
     def get_total_balance_accounts(self):
         return sum(account.account_balance for account in self.accounts)
 

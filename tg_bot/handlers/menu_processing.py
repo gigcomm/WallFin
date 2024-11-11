@@ -81,12 +81,14 @@ async def cryptomarkets(session, level, menu_name, user_tg_id):
     kbds = get_user_cryptomarkets_btns(level=level, cryptomarkets=cryptomarkets, user_tg_id=user_tg_id)
     return image, kbds
 
-
+#определен общая сумма активов для банка, нужен процесс тестирования
 async def choose_banks(session, level, menu_name, bank_id):
     # banner = await orm_get_banner(session, menu_name)
     # image = InputMediaPhoto(media=banner.image, caption=banner.description)
     bank = await orm_get_bank_by_id(session, bank_id)
-    caption = f"В банке {bank.name} содержаться активы:"
+    bank_logic = bank.to_logic()
+    total_balance = bank_logic.get_total_balance()
+    caption = f"В банке {bank.name} содержаться активы на сумму: {total_balance}"
     assets_bank = ['Счета', 'Вклады', 'Валюты']
 
     kbds = get_user_assets_bank_btns(level=level, assets_bank=assets_bank, bank_id=bank_id)
@@ -167,7 +169,7 @@ async def accounts(session, level, menu_name, bank_id, bank_name, page):
         return caption, kbds
 
     account = paginator.get_page()[0]
-    caption = f"Баланс {account.name}: {account.balance}"
+    caption = f"Баланс счета {account.name}: {account.balance}"
 
     pagination_btns = pages(paginator)
 
@@ -224,7 +226,8 @@ async def currencies(session, level, menu_name, bank_id, bank_name, page):
         return caption, kbds
 
     currency = paginator.get_page()[0]
-    caption = f"Баланс {currency.name}: {currency.balance}"
+    caption = (f"Баланс {currency.name}:\n"
+               f"{currency.market_price} x {currency.balance} = {currency.market_price * currency.balance}")
 
     pagination_btns = pages(paginator)
 
@@ -280,7 +283,10 @@ async def deposits(session, level, menu_name, bank_id, bank_name, page):
         return caption, kbds
 
     deposit = paginator.get_page()[0]
-    caption = f"Баланс {deposit.name}: {deposit.balance}"
+    caption = (f"Баланс вклада {deposit.name}:\n "
+               f"Начало вклада: {deposit.start_date} \t Конец вклада: {deposit.deposit_term}\n "
+               f"Сумма на вкладе: {deposit.balance} \t Процентная ставка: {deposit.interest_rate}\n"
+               f"Сумма в конце срока: ")
 
     pagination_btns = pages(paginator)
 
