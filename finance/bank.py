@@ -10,12 +10,12 @@ class BankLogic:
         return sum(account.account_balance for account in self.accounts)
 
     def get_total_balance_currencies(self):
-        return sum(currency.currency_balance for currency in self.currencies)
+        return sum(currency.currency_balance*currency.market_price for currency in self.currencies)
 
     def get_total_balance_deposits(self):
         return sum(deposit.deposit_balance for deposit in self.deposits)
 
-    def get_total_balance(self):
+    def get_total_balance_bank(self):
         return (self.get_total_balance_accounts() +
                 self.get_total_balance_deposits() +
                 self.get_total_balance_currencies())
