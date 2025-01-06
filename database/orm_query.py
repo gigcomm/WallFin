@@ -1,5 +1,6 @@
 from sqlalchemy import select, update, delete
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import joinedload
 
 from database.models import User, Bank, StockMarket, Cryptocurrency, CryptoMarket, Account, Currency, Deposit, Share, \
     Fund, Banner
@@ -43,8 +44,9 @@ async def orm_add_user(session: AsyncSession, message):
     session.add(obj)
     await session.commit()
 
-async def orm_get_user(sesion: AsyncSession, user_id: int):
-    result = await sesion.execute(select(User.id).where(User.user_tg_id == user_id))
+
+async def orm_get_user(session: AsyncSession, user_id: int):
+    result = await session.execute(select(User.id).where(User.user_tg_id == user_id))
     return result.scalar()
 
 
@@ -60,7 +62,11 @@ async def orm_add_bank(session: AsyncSession, data: dict, message):
 
 
 async def orm_get_bank_by_id(session: AsyncSession, bank_id: int):
-    result = await session.execute(select(Bank).where(Bank.id == bank_id))
+    result = await (session.execute(select(Bank).where(Bank.id == bank_id).options(
+        joinedload(Bank.account),
+        joinedload(Bank.currency),
+        joinedload(Bank.deposit))
+    ))
     return result.scalars().first()
 
 
@@ -94,8 +100,11 @@ async def orm_add_stock_market(session: AsyncSession, data: dict, message):
     await session.commit()
 
 
-async def orm_get_stock_market_by_id(session: AsyncSession, stockmarket_id:int):
-    result = await session.execute(select(StockMarket).where(StockMarket.id == stockmarket_id))
+async def orm_get_stock_market_by_id(session: AsyncSession, stockmarket_id: int):
+    result = await session.execute(select(StockMarket).where(StockMarket.id == stockmarket_id).options(
+        joinedload(StockMarket.share),
+        joinedload(StockMarket.fund)
+    ))
     return result.scalars().first()
 
 
@@ -129,9 +138,10 @@ async def orm_add_cryptomarket(session: AsyncSession, data: dict, message):
     await session.commit()
 
 
-
 async def orm_get_cryptomarket_by_id(session: AsyncSession, cryptomarket_id: int):
-    result = await session.execute(select(CryptoMarket).where(CryptoMarket.id == cryptomarket_id))
+    result = await session.execute(select(CryptoMarket).where(CryptoMarket.id == cryptomarket_id).options(
+        joinedload(CryptoMarket.cryptocurrency)
+    ))
     return result.scalars().first()
 
 
@@ -178,7 +188,7 @@ async def orm_get_account_by_bank_id(session: AsyncSession, bank_id: int):
 async def orm_update_account(session: AsyncSession, account_id: int, data):
     query = update(Account).where(Account.id == account_id).values(
         name=data["name"],
-        balance=data["balance"]
+        balance=float(data["balance"])
     )
     await session.execute(query)
     await session.commit()
@@ -214,8 +224,8 @@ async def orm_get_currency_by_bank_id(session: AsyncSession, bank_id: int):
 async def orm_update_currency(session: AsyncSession, currency_id: int, data):
     query = update(Currency).where(Currency.id == currency_id).values(
         name=data["name"],
-        balance=data["balance"],
-        market_price=data["market_price"]
+        balance=float(data["balance"]),
+        market_price=float(data["market_price"])
     )
     await session.execute(query)
     await session.commit()
@@ -254,9 +264,9 @@ async def orm_update_deposit(session: AsyncSession, deposit_id: int, data):
     query = update(Deposit).where(Deposit.id == deposit_id).values(
         name=data["name"],
         start_date=data["start_date"],
-        deposit_term=data["deposit_term"],
-        interest_rate=data["interest_rate"],
-        balance=data["balance"]
+        deposit_term=int(data["deposit_term"]),
+        interest_rate=float(data["interest_rate"]),
+        balance=float(data["balance"])
     )
     await session.execute(query)
     await session.commit()
@@ -276,7 +286,8 @@ async def orm_add_share(session: AsyncSession, data: dict):
         selling_price=float(data["selling_price"]),
         market_price=float(data["market_price"]),
         quantity=int(data["quantity"]),
-        stockmarket_id=int(data["stockmarket_id"])
+        stockmarket_id=int(data["stockmarket_id"]),
+        currency=str(data["currency"])
     )
     session.add(obj)
     await session.commit()
@@ -295,10 +306,11 @@ async def orm_get_share_by_stockmarket_id(session: AsyncSession, stockmarket_id:
 async def orm_update_share(session: AsyncSession, share_id: int, data):
     query = update(Share).where(Share.id == share_id).values(
         name=data["name"],
-        purchase_price=data["purchase_price"],
-        selling_price=data["selling_price"],
-        market_price=data["market_price"],
-        quantity=data["quantity"]
+        purchase_price=float(data["purchase_price"]),
+        selling_price=float(data["selling_price"]),
+        market_price=float(data["market_price"]),
+        currency=str(data["currency"]),
+        quantity=int(data["quantity"])
     )
     await session.execute(query)
     await session.commit()
@@ -317,7 +329,8 @@ async def orm_add_fund(session: AsyncSession, data: dict):
         selling_price=float(data["selling_price"]),
         market_price=float(data["market_price"]),
         quantity=int(data["quantity"]),
-        stockmarket_id=int(data["stockmarket_id"])
+        stockmarket_id=int(data["stockmarket_id"]),
+        currency=str(data["currency"])
     )
     session.add(obj)
     await session.commit()
@@ -336,10 +349,11 @@ async def orm_get_fund_by_stockmarket_id(session: AsyncSession, stockmarket_id: 
 async def orm_update_fund(session: AsyncSession, fund_id: int, data):
     query = update(Fund).where(Fund.id == fund_id).values(
         name=data["name"],
-        purchase_price=data["purchase_price"],
-        selling_price=data["selling_price"],
-        market_price=data["market_price"],
-        quantity=data["quantity"]
+        purchase_price=float(data["purchase_price"]),
+        selling_price=float(data["selling_price"]),
+        market_price=float(data["market_price"]),
+        currency=str(data["currency"]),
+        quantity=int(data["quantity"])
     )
     await session.execute(query)
     await session.commit()
@@ -377,10 +391,10 @@ async def orm_get_cryptocurrency_by_cryptomarket_id(session: AsyncSession, crypt
 async def orm_update_cryptocurrency(session: AsyncSession, cryptocurrency_id: int, data):
     query = update(Cryptocurrency).where(Cryptocurrency.id == cryptocurrency_id).values(
         name=data["name"],
-        balance=data["balance"],
-        purchase_price=data["purchase_price"],
-        selling_price=data["selling_price"],
-        market_price=data["market_price"]
+        balance=float(data["balance"]),
+        purchase_price=float(data["purchase_price"]),
+        selling_price=float(data["selling_price"]),
+        market_price=float(data["market_price"])
     )
     await session.execute(query)
     await session.commit()
