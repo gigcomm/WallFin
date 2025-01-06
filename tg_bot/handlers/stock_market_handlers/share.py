@@ -32,6 +32,7 @@ class AddShare(StatesGroup):
     purchase_price = State()
     selling_price = State()
     market_price = State()
+    currency = State()
     quantity = State()
 
     share_for_change = None
@@ -40,6 +41,7 @@ class AddShare(StatesGroup):
         'AddShare:purchase_price': 'Введите цена покупки заново',
         'AddShare:selling_price': 'Введите цену продажи заново',
         'AddShare:market_price': 'Введите цену на бирже заново',
+        'AddShare:currency': 'Введите наименование валюты для акции (например, RUB, USD, EUR):',
         'AddShare:quantity': 'Это последний стейт...',
     }
 
@@ -120,7 +122,7 @@ async def add_name(message: types.Message, state: FSMContext):
     await state.set_state(AddShare.purchase_price)
 
 
-@share_router.message(AddShare.purchase_price,F.text)
+@share_router.message(AddShare.purchase_price, F.text)
 async def add_purchase_price(message: types.Message, state: FSMContext):
     if message.text == '.' and AddShare.share_for_change:
         await state.update_data(purchase_price=AddShare.share_for_change.purchase_price)
@@ -152,11 +154,13 @@ async def add_market_price(message: types.Message, state: FSMContext):
         market_price = message.text
         if market_price.casefold() == 'авто':
             try:
-                auto_market_price = await get_price_share(share_name)
+                auto_market_price, currency = await get_price_share(share_name)
                 if auto_market_price is None:
                     await message.answer("Введите корректное числовое значение для цены акции")
                     return
-                await state.update_data(market_price=auto_market_price)
+
+                await state.update_data(market_price=auto_market_price, currency=currency)
+
                 await message.answer(f"Курс {share_name} на финбирже автоматически установлен: {auto_market_price}")
             except Exception as e:
                 await message.answer(f"Не удалось получить цену акции: {e}")
@@ -165,11 +169,38 @@ async def add_market_price(message: types.Message, state: FSMContext):
             try:
                 market_price = float(market_price)
                 await state.update_data(market_price=market_price)
+
+                currency = data.get('currency')
+                if not currency:
+                    await message.answer("Введите валюту для акции (например, RUB, USD, EUR):")
+                    await state.set_state(AddShare.currency)
+                    return
             except ValueError:
                 await message.answer("Введите корректное числовое значение для цены акции")
                 return
 
     await message.answer("Введите количество бумаг акции")
+    await state.set_state(AddShare.quantity)
+
+
+@share_router.message(AddShare.currency, F.text)
+async def add_currency(message: types.Message, state: FSMContext):
+    if message.text == '.' and AddShare.share_for_change:
+        await state.update_data(currency=AddShare.share_for_change.currency)
+    else:
+        currency = message.text.upper().strip()
+
+
+        valid_currencies = ['RUB', 'USD', 'EUR']
+        if currency not in valid_currencies:
+            await message.answer("Введите корректный код валюты (например, RUB, USD, EUR):")
+            return
+
+        await state.update_data(currency=currency)
+        updated_data = await state.get_data()
+        print(f"Обновленные данные после ввода валюты: {updated_data}")
+
+    await message.answer("Введите количество бумаг акции:")
     await state.set_state(AddShare.quantity)
 
 
