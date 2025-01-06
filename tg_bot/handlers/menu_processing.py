@@ -87,8 +87,9 @@ async def choose_banks(session, level, menu_name, bank_id):
     # image = InputMediaPhoto(media=banner.image, caption=banner.description)
     bank = await orm_get_bank_by_id(session, bank_id)
     bank_logic = bank.to_logic()
-    total_balance = bank_logic.get_total_balance()
+    total_balance = bank_logic.get_total_balance_bank()
     caption = f"В банке {bank.name} содержаться активы на сумму: {total_balance}"
+
     assets_bank = ['Счета', 'Вклады', 'Валюты']
 
     kbds = get_user_assets_bank_btns(level=level, assets_bank=assets_bank, bank_id=bank_id)
@@ -98,9 +99,15 @@ async def choose_banks(session, level, menu_name, bank_id):
 async def choose_cryptomarkets(session, level, menu_name, cryptomarket_id):
     # banner = await orm_get_banner(session, menu_name)
     # image = InputMediaPhoto(media=banner.image, caption=banner.description)
-    assets_cryptomarkets = ['Криптовалюты']
     cryptomarket = await orm_get_cryptomarket_by_id(session, cryptomarket_id)
-    caption = f"На криптобирже {cryptomarket.name} содержаться активы:"
+    cryptomarket_logic = cryptomarket.to_logic()
+    total_balance = cryptomarket_logic.get_total_balance_cryptomarket()
+    total_balance_rub = cryptomarket_logic.get_total_balance_cryptomarket_in_rubls()
+    caption = (f"На криптобирже {cryptomarket.name} содержаться активы:\n "
+               f"В долларах - {total_balance}💲\n"
+               f"В рублях - {total_balance_rub}")
+
+    assets_cryptomarkets = ['Криптовалюты']
 
     kbds = get_user_assets_cryptomarkets_btns(level=level, assets_cryptomarkets=assets_cryptomarkets,
                                               cryptomarket_id=cryptomarket.id)
@@ -110,9 +117,14 @@ async def choose_cryptomarkets(session, level, menu_name, cryptomarket_id):
 async def choose_stockmarkets(session, level, menu_name, stockmarket_id):
     # banner = await orm_get_banner(session, menu_name)
     # image = InputMediaPhoto(media=banner.image, caption=banner.description)
-    assets_stockmarkets = ['Акции', 'Фонды']
+
     stockmarket = await orm_get_stock_market_by_id(session, stockmarket_id)
-    caption = f"На финбирже {stockmarket.name} содержаться активы:"
+    stockmarket_logic = stockmarket.to_logic()
+    total_balance = stockmarket_logic.get_total_balance_stockmarket()
+    caption = f"На финбирже {stockmarket.name} содержаться активы: {total_balance}"
+
+    assets_stockmarkets = ['Акции', 'Фонды']
+
     kbds = get_user_assets_stockmarkets_btns(level=level, assets_stockmarkets=assets_stockmarkets,
                                              stockmarket_id=stockmarket.id)
     return caption, kbds
