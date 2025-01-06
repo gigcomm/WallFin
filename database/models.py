@@ -1,11 +1,8 @@
-from locale import currency
-
 from sqlalchemy import Text, Float, Integer, String, BigInteger, Date, DECIMAL, ForeignKey
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 from finance.bank import BankLogic, AccountLogic, CurrencyLogic, DepositLogic
 from finance.market import StockMarketLogic, CryptoMarketLogic, ShareLogic, FundLogic, СryptocurrencyLogic
-from tg_bot.handlers.menu_processing import accounts, deposits, cryptocurrencies
 
 
 class Base(DeclarativeBase):
@@ -46,10 +43,10 @@ class Bank(Base):
     def to_logic(self):
         account_logic = [AccountLogic(account.name, account.balance)
                          for account in self.account]
-        currency_logic = [CurrencyLogic(currency.name, currency.balance, currency.market_price)
-                          for currency in self.currency]
+        currency_logic = [CurrencyLogic(curr.name, curr.balance, curr.market_price)
+                          for curr in self.currency]
         deposit_logic = [DepositLogic(deposit.name, deposit.start_date, deposit.deposit_term, deposit.interest_rate,
-                                      deposit.deposit_balance) for deposit in self.deposit]
+                                      deposit.balance) for deposit in self.deposit]
         return BankLogic(bank_name=self.name, accounts=account_logic, currencies=currency_logic, deposits=deposit_logic)
 
 
@@ -116,6 +113,7 @@ class Share(Base):
     selling_price: Mapped[float] = mapped_column(Float, nullable=False)
     market_price: Mapped[float] = mapped_column(DECIMAL(10, 2), nullable=False)
     quantity: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    currency: Mapped[str] = mapped_column(String, nullable=False)
     stockmarket_id: Mapped[int] = mapped_column(ForeignKey("stockmarket.id", ondelete="CASCADE"), nullable=False)
 
     stockmarket: Mapped["StockMarket"] = relationship(back_populates="share")
@@ -129,6 +127,7 @@ class Fund(Base):
     selling_price: Mapped[float] = mapped_column(Float, nullable=False)
     market_price: Mapped[float] = mapped_column(DECIMAL(10, 2), nullable=False)
     quantity: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    currency: Mapped[str] = mapped_column(String, nullable=False)
     stockmarket_id: Mapped[int] = mapped_column(ForeignKey("stockmarket.id", ondelete="CASCADE"), nullable=False)
 
     stockmarket: Mapped["StockMarket"] = relationship(back_populates="fund")
