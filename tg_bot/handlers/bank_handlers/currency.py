@@ -146,7 +146,7 @@ async def add_market_price(message: types.Message, state: FSMContext, session: A
             try:
                 auto_market_price = get_exchange_rate(currency_name, 'RUB')
                 await state.update_data(market_price=auto_market_price)
-                await message.answer(f"Курс {currency_name} к RUB автоматически установлен: {market_price}")
+                await message.answer(f"Курс {currency_name} к RUB автоматически установлен: {auto_market_price}")
             except Exception as e:
                 await message.answer(f"Не удалось получить курс валюты: {e}")
                 return
