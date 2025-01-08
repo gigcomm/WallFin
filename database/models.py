@@ -97,10 +97,10 @@ class StockMarket(Base):
 
     def to_logic(self):
         share_logic = [
-            ShareLogic(share.name, share.purchase_price, share.selling_price, share.market_price, share.quantity)
+            ShareLogic(share.name, share.purchase_price, share.selling_price, share.market_price, share.quantity, share.currency)
             for share in self.share]
         fund_logic = [
-            FundLogic(fund.name, fund.purchase_price, fund.selling_price, fund.market_price, fund.quantity)
+            FundLogic(fund.name, fund.purchase_price, fund.selling_price, fund.market_price, fund.quantity, fund.currency)
             for fund in self.fund]
         return StockMarketLogic(name=self.name, shares=share_logic, funds=fund_logic)
 
@@ -154,10 +154,10 @@ class Cryptocurrency(Base):
     __tablename__ = 'cryptocurrency'
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     name: Mapped[str] = mapped_column(String(150), unique=True, nullable=False)
-    balance: Mapped[float] = mapped_column(DECIMAL(20, 2), nullable=False, default=0.0)
+    balance: Mapped[float] = mapped_column(DECIMAL(20, 8), nullable=False, default=0.0)
     purchase_price: Mapped[float] = mapped_column(Float, nullable=False)
     selling_price: Mapped[float] = mapped_column(Float, nullable=False)
-    market_price: Mapped[float] = mapped_column(DECIMAL(10, 2), nullable=False)
+    market_price: Mapped[float] = mapped_column(DECIMAL(10, 8), nullable=False)
     cryptomarket_id: Mapped[int] = mapped_column(ForeignKey("cryptomarket.id", ondelete="CASCADE"), nullable=False)
 
     cryptomarket: Mapped["CryptoMarket"] = relationship(back_populates="cryptocurrency")
