@@ -87,8 +87,20 @@ async def choose_banks(session, level, menu_name, bank_id):
     # image = InputMediaPhoto(media=banner.image, caption=banner.description)
     bank = await orm_get_bank_by_id(session, bank_id)
     bank_logic = bank.to_logic()
-    total_balance = bank_logic.get_total_balance_bank()
-    caption = f"В банке {bank.name} содержаться активы на сумму: {total_balance}"
+
+    total_balance_rubls = bank_logic.get_total_balance_bank_rubls()
+    total_balance_dollars = bank_logic.get_total_balance_bank_dollars()
+    total_balance_accounts = bank_logic.get_total_balance_accounts_rubls()
+    total_balance_currencies = bank_logic.get_total_balance_currencies_rubls()
+    total_balance_deposits = bank_logic.get_total_balance_deposits_rubls()
+
+    caption = (f"В банке {bank.name} содержаться активы:\n"
+               f"Баланс на всех счетах: {total_balance_accounts}\n"
+               f"Баланс всех валютных счетов: {total_balance_currencies}\n"
+               f"Баланс всех вкладов: {total_balance_deposits}\n\n"
+               f"Общий баланс всех автивов банка:\n"
+               f"В рублях - {total_balance_rubls}\n"
+               f"В долларах - {total_balance_dollars}💲")
 
     assets_bank = ['Счета', 'Вклады', 'Валюты']
 
@@ -101,9 +113,9 @@ async def choose_cryptomarkets(session, level, menu_name, cryptomarket_id):
     # image = InputMediaPhoto(media=banner.image, caption=banner.description)
     cryptomarket = await orm_get_cryptomarket_by_id(session, cryptomarket_id)
     cryptomarket_logic = cryptomarket.to_logic()
-    total_balance = cryptomarket_logic.get_total_balance_cryptomarket()
+    total_balance = cryptomarket_logic.get_total_balance_cryptomarket_in_dollars()
     total_balance_rub = cryptomarket_logic.get_total_balance_cryptomarket_in_rubls()
-    caption = (f"На криптобирже {cryptomarket.name} содержаться активы:\n "
+    caption = (f"На криптобирже {cryptomarket.name} содержаться активы:\n"
                f"В долларах - {total_balance}💲\n"
                f"В рублях - {total_balance_rub}")
 
@@ -120,8 +132,11 @@ async def choose_stockmarkets(session, level, menu_name, stockmarket_id):
 
     stockmarket = await orm_get_stock_market_by_id(session, stockmarket_id)
     stockmarket_logic = stockmarket.to_logic()
-    total_balance = stockmarket_logic.get_total_balance_stockmarket()
-    caption = f"На финбирже {stockmarket.name} содержаться активы: {total_balance}"
+    total_balance_dollars = stockmarket_logic.get_total_balance_stockmarket_in_dollars()
+    total_balance_rubls = stockmarket_logic.get_total_balance_stockmarket_in_rubls()
+    caption = (f"На финбирже {stockmarket.name} содержаться активы:\n"
+               f"В долларах - {total_balance_dollars}💲\n"
+               f"В рублях - {total_balance_rubls}")
 
     assets_stockmarkets = ['Акции', 'Фонды']
 
