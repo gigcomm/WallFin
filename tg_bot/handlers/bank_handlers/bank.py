@@ -2,12 +2,17 @@ from aiogram.filters.callback_data import CallbackData
 from aiogram.types import CallbackQuery
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from database.orm_query import orm_add_bank, orm_delete_bank, orm_get_bank, orm_update_bank
+from database.orm_query import (
+    orm_add_bank,
+    orm_delete_bank,
+    orm_get_bank,
+    orm_update_bank,
+    orm_get_bank_by_id)
+
 from tg_bot.handlers.common_imports import *
 from tg_bot.handlers.bank_handlers.account import account_router
 from tg_bot.handlers.bank_handlers.currency import currency_router
 from tg_bot.handlers.bank_handlers.deposit import deposit_router
-from tg_bot.handlers.user_private import menu_command
 from tg_bot.keyboards.inline import get_callback_btns
 
 user_bank = {}
@@ -49,12 +54,15 @@ class AddBank(StatesGroup):
     name = State()
 
     bank_for_change = None
+    texts = {
+        'AddBank:name': 'Введите новое название для банка',
+    }
 
 
 # НАПИСАТЬ ДОПОЛНИТЕЛЬНОЕ ПОДВЕРЖДЕНИЕ НА УДАЛЕНИЕ
 @bank_router.callback_query(F.data.startswith('delete_bank'))
 async def delete_bank(callback: types.CallbackQuery, session: AsyncSession):
-    bank_id = callback.data.split("_")[-1]
+    bank_id = callback.data.split(":")[-1]
     await orm_delete_bank(session, int(bank_id))
 
     await callback.answer("Банк удален")
@@ -63,8 +71,8 @@ async def delete_bank(callback: types.CallbackQuery, session: AsyncSession):
 
 @bank_router.callback_query(StateFilter(None), F.data.startswith('change_bank'))
 async def change_bank(callback: types.CallbackQuery, state: FSMContext, session: AsyncSession):
-    bank_id = callback.data.split("_")[-1]
-    bank_for_change = await orm_get_bank(session, int(bank_id))
+    bank_id = callback.data.split(":")[-1]
+    bank_for_change = await orm_get_bank_by_id(session, int(bank_id))
 
     AddBank.bank_for_change = bank_for_change
 
@@ -90,7 +98,7 @@ async def cancel_handler(message: types.Message, state: FSMContext) -> None:
     await message.answer("Действия отменены")
 
 
-@bank_router.message(AddBank.name, or_f(F.text, F.text == '.'))
+@bank_router.message(AddBank.name, or_f(F.text))
 async def add_name(message: types.Message, state: FSMContext, session: AsyncSession):
     if message.text == '.' and AddBank.bank_for_change:
         await state.update_data(name=AddBank.bank_for_change.name)
