@@ -14,7 +14,13 @@ async def orm_add_banner_description(session: AsyncSession, data: dict):
     await session.commit()
 
 
-async def orm_change_banner_image(session: AsyncSession, name: str, image: str):
+async def orm_update_banner_description(session: AsyncSession, name: str, description: str):
+    result = update(Banner).where(Banner.name == name).values(description=description)
+    await session.execute(result)
+    await session.commit()
+
+
+async def orm_update_banner_image(session: AsyncSession, name: str, image: str):
     result = update(Banner).where(Banner.name == name).values(image=image)
     await session.execute(result)
     await session.commit()
@@ -62,21 +68,25 @@ async def orm_add_bank(session: AsyncSession, data: dict, message):
 
 
 async def orm_get_bank_by_id(session: AsyncSession, bank_id: int):
-    result = await (session.execute(select(Bank).where(Bank.id == bank_id).options(
+    result = await session.execute(select(Bank).where(Bank.id == bank_id).options(
         joinedload(Bank.account),
         joinedload(Bank.currency),
         joinedload(Bank.deposit))
-    ))
-    return result.scalars().first()
+    )
+    return result.unique().scalars().first()
 
 
 async def orm_get_bank(session: AsyncSession, user_id: int):
-    result = await session.execute(select(Bank).where(Bank.user_id == user_id))
-    return result.scalars().all()
+    result = await session.execute(select(Bank).where(Bank.user_id == user_id).options(
+        joinedload(Bank.account),
+        joinedload(Bank.currency),
+        joinedload(Bank.deposit))
+    )
+    return result.unique().scalars().all()
 
 
-async def orm_update_bank(session: AsyncSession, bunk_id: int, data):
-    query = update(Bank).where(Bank.id == bunk_id).values(
+async def orm_update_bank(session: AsyncSession, bank_id: int, data):
+    query = update(Bank).where(Bank.id == bank_id).values(
         name=data["name"]
     )
     await session.execute(query)
@@ -105,12 +115,15 @@ async def orm_get_stock_market_by_id(session: AsyncSession, stockmarket_id: int)
         joinedload(StockMarket.share),
         joinedload(StockMarket.fund)
     ))
-    return result.scalars().first()
+    return result.unique().scalars().first()
 
 
 async def orm_get_stock_market(session: AsyncSession, user_id: int):
-    result = await session.execute(select(StockMarket).where(StockMarket.user_id == user_id))
-    return result.scalars().all()
+    result = await session.execute(select(StockMarket).where(StockMarket.user_id == user_id).options(
+        joinedload(StockMarket.share),
+        joinedload(StockMarket.fund))
+    )
+    return result.unique().scalars().all()
 
 
 async def orm_update_stock_market(session: AsyncSession, stockmarket_id: int, data):
@@ -142,12 +155,14 @@ async def orm_get_cryptomarket_by_id(session: AsyncSession, cryptomarket_id: int
     result = await session.execute(select(CryptoMarket).where(CryptoMarket.id == cryptomarket_id).options(
         joinedload(CryptoMarket.cryptocurrency)
     ))
-    return result.scalars().first()
+    return result.unique().scalars().first()
 
 
 async def orm_get_cryptomarket(session: AsyncSession, user_id: int):
-    result = await session.execute(select(CryptoMarket).where(CryptoMarket.user_id == user_id))
-    return result.scalars().all()
+    result = await session.execute(select(CryptoMarket).where(CryptoMarket.user_id == user_id).options(
+        joinedload(CryptoMarket.cryptocurrency))
+    )
+    return result.unique().scalars().all()
 
 
 async def orm_update_cryptomarket(session: AsyncSession, cryptomarket_id: int, data):
