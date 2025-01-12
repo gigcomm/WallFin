@@ -1,11 +1,14 @@
+from decimal import Decimal
+
 from aiogram import types, Router
-from aiogram.filters import CommandStart
-from aiogram.types import CallbackQuery, InputMediaPhoto
+from aiogram.filters import CommandStart, Command
+from aiogram.types import CallbackQuery, InputMediaPhoto, Message
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database.orm_query import orm_add_user
-from tg_bot.handlers.menu_processing import get_menu_content, cryptomarkets, stockmarkets
+from tg_bot.handlers.menu_processing import get_menu_content
 from tg_bot.keyboards.inline import MenuCallBack
+from finance.total_balance import calculate_total_balance
 
 user_private_router = Router()
 
@@ -19,6 +22,21 @@ async def start_cmd(message: types.Message, session: AsyncSession):
 
 @user_private_router.callback_query(MenuCallBack.filter())
 async def menu_command(callback_query: CallbackQuery, callback_data: MenuCallBack, session: AsyncSession):
+    menu_name = callback_data.menu_name
+
+    if menu_name == "total_balance":
+        user_tg_id = int(callback_data.user_tg_id)
+        if user_tg_id is None:
+            await callback_query.answer("Ошибка: не удалось получить идентификатор пользователя.", show_alert=True)
+            return
+
+        try:
+            await calculate_total_balance(session, user_tg_id)
+        except Exception as e:
+            print(f"Ошибка при вычислении баланса: {e}")
+            await callback_query.answer("Ошибка при вычислении баланса. Попробуйте позже.")
+            return
+
     media_or_caption, reply_markup = await get_menu_content(
         session,
         level=callback_data.level,
