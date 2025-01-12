@@ -17,26 +17,22 @@ class StockMarketLogic(MarketLogic):
         self.funds = funds
 
     def get_total_balance_shares_in_dollars(self):
-        result = sum(
+        return sum(
             (share.market_price * share.quantity) * Decimal(get_exchange_rate(share.currency, "USD")) for share in
             self.shares)
-        return f"{result:.2f}"
 
     def get_total_balance_shares_in_rubls(self):
-        result =  sum(
+      return sum(
             (share.market_price * share.quantity) * Decimal(get_exchange_rate(share.currency, "RUB")) for share in
             self.shares)
-        return f"{result:.2f}"
 
     def get_total_balance_funds_in_dollars(self):
-        result =  sum((fund.market_price * fund.quantity) * Decimal(get_exchange_rate(fund.currency, "USD")) for fund in
+        return sum((fund.market_price * fund.quantity) * Decimal(get_exchange_rate(fund.currency, "USD")) for fund in
                    self.funds)
-        return f"{result:.2f}"
 
     def get_total_balance_funds_in_rubls(self):
-        result =  sum((fund.market_price * fund.quantity) * Decimal(get_exchange_rate(fund.currency, "RUB")) for fund in
+        return sum((fund.market_price * fund.quantity) * Decimal(get_exchange_rate(fund.currency, "RUB")) for fund in
                    self.funds)
-        return f"{result:.2f}"
 
     def get_total_balance_stockmarket_in_dollars(self):
         return Decimal(self.get_total_balance_shares_in_dollars()) + Decimal(self.get_total_balance_funds_in_dollars())
@@ -88,8 +84,8 @@ class CryptoMarketLogic(MarketLogic):
 
     def get_total_balance_cryptomarket_in_rubls(self):
         exchange_rate = Decimal(get_exchange_rate("USD", "RUB"))
-        result = self.get_total_balance_cryptomarket_in_dollars() * exchange_rate
-        return f"{result:.2f}"
+        return Decimal(self.get_total_balance_cryptomarket_in_dollars() * exchange_rate)
+
 
 
 class СryptocurrencyLogic:
