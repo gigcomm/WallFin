@@ -1,7 +1,10 @@
 from aiogram.types import CallbackQuery
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from database.orm_query import orm_add_currency, orm_delete_currency, orm_get_currency, orm_update_currency
+from database.orm_query import (orm_add_currency,
+                                orm_delete_currency,
+                                orm_get_currency,
+                                orm_update_currency)
 from tg_bot.handlers.common_imports import *
 from parsers.parser_currency_rate import get_exchange_rate
 from tg_bot.keyboards.inline import get_callback_btns
