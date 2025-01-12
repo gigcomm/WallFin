@@ -2,7 +2,7 @@ import os
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from database.orm_query import orm_get_info_pages, orm_get_banner, orm_change_banner_image
+from database.orm_query import orm_get_info_pages, orm_update_banner_image
 from tg_bot.handlers.common_imports import *
 from tg_bot.keyboards.reply import get_keyboard
 
@@ -41,6 +41,6 @@ async def add_banner(message: types.Message, state: FSMContext, session: AsyncSe
         await message.answer(f"Введите существующее название страницы, напримаер"
                              f"{', '.join(pages_names)}")
         return
-    await orm_change_banner_image(session, for_page, image_id)
+    await orm_update_banner_image(session, for_page, image_id)
     await message.answer("Баннер добвален/изменен")
     await state.clear()
