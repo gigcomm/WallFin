@@ -4,8 +4,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from database.orm_query import (
     orm_add_cryptomarket,
     orm_delete_cryptomarket,
-    orm_get_cryptomarket,
-    orm_update_cryptomarket)
+    orm_update_cryptomarket,
+    orm_get_cryptomarket_by_id)
+
 from tg_bot.handlers.common_imports import *
 from tg_bot.handlers.cryptomarket_handlers.cryptocurrency import cryptocurrency_router
 from tg_bot.keyboards.inline import get_callback_btns
@@ -44,12 +45,15 @@ class AddCryptomarket(StatesGroup):
     name = State()
 
     cryptomarket_for_change = None
+    texts = {
+        'AddCryptomarket:name': 'Введите новое название для криптобиржи',
+    }
 
 
 # НАПИСАТЬ ДОПОЛНИТЕЛЬНОЕ ПОДВЕРЖДЕНИЕ НА УДАЛЕНИЕ
-@cryptomarket_router.callback_query(F.data.startswith('delete_'))
+@cryptomarket_router.callback_query(F.data.startswith('delete_cryptomarket'))
 async def delete_cryptomarket(callback: types.CallbackQuery, session: AsyncSession):
-    cryptomarket_id = callback.data.split("_")[-1]
+    cryptomarket_id = callback.data.split(":")[-1]
     await orm_delete_cryptomarket(session, int(cryptomarket_id))
 
     await callback.answer("Криптобиржа удалена")
@@ -58,8 +62,8 @@ async def delete_cryptomarket(callback: types.CallbackQuery, session: AsyncSessi
 
 @cryptomarket_router.callback_query(StateFilter(None), F.data.startswith('change_cryptomarket'))
 async def change_cryptomarket(callback: types.CallbackQuery, state: FSMContext, session: AsyncSession):
-    cryptomarket_id = callback.data.split("_")[-1]
-    cryptomarket_for_change = await orm_get_cryptomarket(session, int(cryptomarket_id))
+    cryptomarket_id = callback.data.split(":")[-1]
+    cryptomarket_for_change = await orm_get_cryptomarket_by_id(session, int(cryptomarket_id))
 
     AddCryptomarket.cryptomarket_for_change = cryptomarket_for_change
 
@@ -87,7 +91,7 @@ async def cancel_handler(message: types.Message, state: FSMContext) -> None:
     await message.answer("Действия отменены")
 
 
-@cryptomarket_router.message(AddCryptomarket.name, or_f(F.text, F.text == '.'))
+@cryptomarket_router.message(AddCryptomarket.name, or_f(F.text))
 async def add_balance(message: types.Message, state: FSMContext, session: AsyncSession):
     if message.text == '.' and AddCryptomarket.cryptomarket_for_change:
         await state.update_data(name=AddCryptomarket.cryptomarket_for_change.name)
@@ -98,6 +102,7 @@ async def add_balance(message: types.Message, state: FSMContext, session: AsyncS
             )
             return
         await state.update_data(name=message.text)
+
     data = await state.get_data()
     try:
         if AddCryptomarket.cryptomarket_for_change:

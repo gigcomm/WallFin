@@ -1,8 +1,13 @@
 from aiogram.types import CallbackQuery
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from database.orm_query import orm_add_stock_market, orm_delete_stock_market, orm_get_stock_market, \
-    orm_update_cryptomarket
+from database.orm_query import (
+    orm_add_stock_market,
+    orm_delete_stock_market,
+    orm_update_cryptomarket,
+    orm_get_stock_market_by_id,
+    orm_update_stock_market)
+
 from tg_bot.handlers.common_imports import *
 from tg_bot.handlers.stock_market_handlers.fund import fund_router
 from tg_bot.handlers.stock_market_handlers.share import share_router
@@ -39,16 +44,19 @@ async def process_stockmarket_selection(callback_query: CallbackQuery):
     await callback_query.answer()
 
 
-class ADDStockMarket(StatesGroup):
+class AddStockMarket(StatesGroup):
     name = State()
 
     stock_market_for_change = None
+    texts = {
+        'AddStockMarket:name': 'Введите новое название для финбиржи',
+    }
 
 
 # НАПИСАТЬ ДОПОЛНИТЕЛЬНОЕ ПОДВЕРЖДЕНИЕ НА УДАЛЕНИЕ
-@stock_market_router.callback_query(F.data.startswith('delete_'))
+@stock_market_router.callback_query(F.data.startswith('delete_stockmarket'))
 async def delete_stock_market(callback: types.CallbackQuery, session: AsyncSession):
-    stock_market_id = callback.data.split("_")[-1]
+    stock_market_id = callback.data.split(":")[-1]
     await orm_delete_stock_market(session, int(stock_market_id))
 
     await callback.answer("Криптобиржа удалена")
@@ -57,20 +65,20 @@ async def delete_stock_market(callback: types.CallbackQuery, session: AsyncSessi
 
 @stock_market_router.callback_query(StateFilter(None), F.data.startswith('change_stockmarket'))
 async def change_stock_market(callback: types.CallbackQuery, state: FSMContext, session: AsyncSession):
-    stock_market_id = callback.data.split("_")[-1]
-    stock_market_for_change = await orm_get_stock_market(session, int(stock_market_id))
+    stock_market_id = callback.data.split(":")[-1]
+    stock_market_for_change = await orm_get_stock_market_by_id(session, int(stock_market_id))
 
-    ADDStockMarket.stock_market_for_change = stock_market_for_change
+    AddStockMarket.stock_market_for_change = stock_market_for_change
 
     await callback.answer()
     await callback.message.answer("Введите название финбиржи")
-    await state.set_state(ADDStockMarket.name)
+    await state.set_state(AddStockMarket.name)
 
 
 @stock_market_router.callback_query(StateFilter(None), F.data.startswith('add_stockmarket'))
 async def add_stock_market(message: types.Message, state: FSMContext):
     await message.answer("Введите название финбиржи")
-    await state.set_state(ADDStockMarket.name)
+    await state.set_state(AddStockMarket.name)
 
 
 @stock_market_router.message(StateFilter('*'), Command('отмена финбиржи'))
@@ -84,10 +92,10 @@ async def cancel_handler(message: types.Message, state: FSMContext) -> None:
     await message.answer("Действия отменены")
 
 
-@stock_market_router.message(ADDStockMarket.name, or_f(F.text, F.text == '.'))
+@stock_market_router.message(AddStockMarket.name, or_f(F.text))
 async def add_name(message: types.Message, state: FSMContext, session: AsyncSession):
-    if message.text == '.' and ADDStockMarket.stock_market_for_change:
-        await state.update_data(name=ADDStockMarket.stock_market_for_change.name)
+    if message.text == '.' and AddStockMarket.stock_market_for_change:
+        await state.update_data(name=AddStockMarket.stock_market_for_change.name)
     else:
         if len(message.text) >= 150:
             await message.answer(
@@ -98,8 +106,8 @@ async def add_name(message: types.Message, state: FSMContext, session: AsyncSess
 
     data = await state.get_data()
     try:
-        if ADDStockMarket.stock_market_for_change:
-            await orm_update_cryptomarket(session, ADDStockMarket.stock_market_for_change.id, data)
+        if AddStockMarket.stock_market_for_change:
+            await orm_update_stock_market(session, AddStockMarket.stock_market_for_change.id, data)
         else:
             await orm_add_stock_market(session, data, message)
         await message.answer("Финбиржа добавлена")
@@ -109,4 +117,4 @@ async def add_name(message: types.Message, state: FSMContext, session: AsyncSess
         await message.answer(f"Ошибка {e}, обратитесь к @gigcomm, чтобы исправить ее!")
         await state.clear()
 
-    ADDStockMarket.stock_market_for_change = None
+    AddStockMarket.stock_market_for_change = None
