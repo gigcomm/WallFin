@@ -96,11 +96,11 @@ async def choose_banks(session, level, menu_name, bank_id):
 
     caption = (f"В банке {bank.name} содержаться активы:\n"
                f"Баланс на всех счетах: {total_balance_accounts}\n"
-               f"Баланс всех валютных счетов: {total_balance_currencies}\n"
-               f"Баланс всех вкладов: {total_balance_deposits}\n\n"
+               f"Баланс всех валютных счетов: {total_balance_currencies:.2f}\n"
+               f"Баланс всех вкладов: {total_balance_deposits:.2f}\n\n"
                f"Общий баланс всех автивов банка:\n"
-               f"В рублях - {total_balance_rubls}\n"
-               f"В долларах - {total_balance_dollars}💲")
+               f"В рублях - {total_balance_rubls:.2f}\n"
+               f"В долларах - {total_balance_dollars:.2f}💲")
 
     assets_bank = ['Счета', 'Вклады', 'Валюты']
 
@@ -116,8 +116,8 @@ async def choose_cryptomarkets(session, level, menu_name, cryptomarket_id):
     total_balance = cryptomarket_logic.get_total_balance_cryptomarket_in_dollars()
     total_balance_rub = cryptomarket_logic.get_total_balance_cryptomarket_in_rubls()
     caption = (f"На криптобирже {cryptomarket.name} содержаться активы:\n"
-               f"В долларах - {total_balance}💲\n"
-               f"В рублях - {total_balance_rub}")
+               f"В долларах - {total_balance:.2f}💲\n"
+               f"В рублях - {total_balance_rub:.2f}")
 
     assets_cryptomarkets = ['Криптовалюты']
 
@@ -135,8 +135,8 @@ async def choose_stockmarkets(session, level, menu_name, stockmarket_id):
     total_balance_dollars = stockmarket_logic.get_total_balance_stockmarket_in_dollars()
     total_balance_rubls = stockmarket_logic.get_total_balance_stockmarket_in_rubls()
     caption = (f"На финбирже {stockmarket.name} содержаться активы:\n"
-               f"В долларах - {total_balance_dollars}💲\n"
-               f"В рублях - {total_balance_rubls}")
+               f"В долларах - {total_balance_dollars:.2f}💲\n"
+               f"В рублях - {total_balance_rubls:.2f}")
 
     assets_stockmarkets = ['Акции', 'Фонды']
 
