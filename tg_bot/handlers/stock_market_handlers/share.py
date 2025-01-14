@@ -2,13 +2,23 @@ from aiogram.types import CallbackQuery
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database.orm_query import orm_add_share, orm_delete_share, orm_get_share, orm_update_share
-from tg_bot.handlers.bank_handlers.deposit import AddDeposit
 from tg_bot.handlers.common_imports import *
-
+from tg_bot.keyboards.reply import get_keyboard
 from parsers.tinkoff_invest_API import get_price_share
-from tg_bot.keyboards.inline import get_callback_btns
+
 
 share_router = Router()
+
+SHARE_CANCEL_FSM = get_keyboard(
+    "Отменить действие с акцией",
+    placeholder="Используйте кнопки ниже для отмены",
+)
+
+SHARE_CANCEL_AND_BACK_FSM = get_keyboard(
+"Отменить действие с акцией",
+    "Назад к предыдущему шагу для акции",
+    placeholder="Используйте кнопки ниже для действий",
+)
 
 
 # @share_router.callback_query(lambda callback_query: callback_query.data.startswith("share_"))
@@ -56,14 +66,14 @@ class AddShare(StatesGroup):
 
 
 @share_router.callback_query(StateFilter(None), F.data.startswith('change_share'))
-async def change_share(callback_query: types.CallbackQuery, state: FSMContext, session: AsyncSession):
+async def change_share(callback_query: CallbackQuery, state: FSMContext, session: AsyncSession):
     share_id = int(callback_query.data.split(":")[-1])
     await state.update_data(share_id=share_id)
-    share_for_change = await orm_get_share(session, int(share_id))
+    share_for_change = await orm_get_share(session, share_id)
     AddShare.share_for_change = share_for_change
 
     await callback_query.answer()
-    await callback_query.message.answer("Введите тикер акции, например: SBER, AAPL...")
+    await callback_query.message.answer("Введите тикер акции, например: SBER, AAPL...", reply_markup=SHARE_CANCEL_AND_BACK_FSM)
     await state.set_state(AddShare.name)
 
 
@@ -72,13 +82,13 @@ async def add_cryptomarket(callback_query: CallbackQuery, state: FSMContext):
     stockmarket_id = int(callback_query.data.split(":")[-1])
     await state.update_data(stockmarket_id=stockmarket_id)
     await callback_query.message.answer(
-        "Введите тикер акции, например: SBER, AAPL...", reply_markup=types.ReplyKeyboardRemove()
+        "Введите тикер акции, например: SBER, AAPL...", reply_markup=SHARE_CANCEL_FSM
     )
     await state.set_state(AddShare.name)
 
 
-@share_router.message(StateFilter('*'), Command('отмена акции'))
-@share_router.message(StateFilter('*'), F.text.casefold() == 'отмена акции')
+@share_router.message(StateFilter('*'), Command('Отменить действие с акцией'))
+@share_router.message(StateFilter('*'), F.text.casefold() == 'отменить действие с акцией')
 async def cancel_handler(message: types.Message, state: FSMContext) -> None:
     current_state = await state.get_state()
     if current_state is None:
@@ -89,13 +99,13 @@ async def cancel_handler(message: types.Message, state: FSMContext) -> None:
     await message.answer("Действия отменены")
 
 
-@share_router.message(StateFilter('*'), Command('назад акции'))
-@share_router.message(StateFilter('*'), F.text.casefold() == "назад акции")
+@share_router.message(StateFilter('*'), Command('Назад к предыдущему шагу для акции'))
+@share_router.message(StateFilter('*'), F.text.casefold() == "назад к предыдущему шагу для акции")
 async def back_handler(message: types.Message, state: FSMContext) -> None:
     current_state = await state.get_state()
 
-    if current_state is None:
-        await message.answer("Предыдущего шага нет, введите название счета или напишите 'отмена'")
+    if current_state == AddShare.name:
+        await message.answer("Предыдущего шага нет, введите название валюты или нажмите ниже на кнопку отмены")
         return
 
     previous = None

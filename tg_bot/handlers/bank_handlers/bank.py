@@ -13,7 +13,9 @@ from tg_bot.handlers.common_imports import *
 from tg_bot.handlers.bank_handlers.account import account_router
 from tg_bot.handlers.bank_handlers.currency import currency_router
 from tg_bot.handlers.bank_handlers.deposit import deposit_router
-from tg_bot.keyboards.inline import get_callback_btns
+from tg_bot.keyboards.delete_confirmation_keyboard import get_delete_confirmation_keyboard
+from tg_bot.keyboards.inline import get_callback_btns, MenuCallBack
+from tg_bot.keyboards.reply import get_keyboard
 
 user_bank = {}
 
@@ -21,6 +23,11 @@ bank_router = Router()
 bank_router.include_router(account_router)
 bank_router.include_router(currency_router)
 bank_router.include_router(deposit_router)
+
+BANK_CANCEL_FSM = get_keyboard(
+    "Отменить действие с банком",
+    placeholder="Нажмите на кнопку ниже, чтобы отменить добавление/изменение",
+)
 
 
 @bank_router.message(F.text == "Банки")
@@ -59,43 +66,55 @@ class AddBank(StatesGroup):
     }
 
 
-# НАПИСАТЬ ДОПОЛНИТЕЛЬНОЕ ПОДВЕРЖДЕНИЕ НА УДАЛЕНИЕ
-@bank_router.callback_query(F.data.startswith('delete_bank'))
-async def delete_bank(callback: types.CallbackQuery, session: AsyncSession):
-    bank_id = callback.data.split(":")[-1]
-    await orm_delete_bank(session, int(bank_id))
+# # НАПИСАТЬ ДОПОЛНИТЕЛЬНОЕ ПОДВЕРЖДЕНИЕ НА УДАЛЕНИЕ
+# @bank_router.callback_query(F.data.startswith('delete_bank'))
+# async def delete_bank(callback: types.CallbackQuery):
+#     bank_id = int(callback.data.split(":")[-1])
+#     keyboard = get_delete_confirmation_keyboard(bank_id)
+#     await callback.message.edit_text(
+#         "Вы уверены, что хотите удалить банк? Это действие необратимо.",
+#         reply_markup=keyboard
+#     )
+#     await callback.answer()
 
-    await callback.answer("Банк удален")
-    await callback.message.answer("Банк удален")
+# @bank_router.callback_query(MenuCallBack.filter(F.action == "confirm_delete"))
+# async def confirm_delete_bank(callback: types.CallbackQuery, session: AsyncSession, callback_data: MenuCallBack):
+#     print(callback_data.action)
+#     if callback_data.action == "confirm_delete":
+#         bank_id = int(callback_data.bank_id)
+#         await orm_delete_bank(session, bank_id)
+#
+#         await callback.answer("Банк удален")
+#         await callback.message.answer("Банк удален")
 
 
 @bank_router.callback_query(StateFilter(None), F.data.startswith('change_bank'))
 async def change_bank(callback: types.CallbackQuery, state: FSMContext, session: AsyncSession):
-    bank_id = callback.data.split(":")[-1]
-    bank_for_change = await orm_get_bank_by_id(session, int(bank_id))
+    bank_id = int(callback.data.split(":")[-1])
+    bank_for_change = await orm_get_bank_by_id(session, bank_id)
 
     AddBank.bank_for_change = bank_for_change
 
     await callback.answer()
-    await callback.message.answer("Введите название банка")
+    await callback.message.answer("Введите название банка", reply_markup=BANK_CANCEL_FSM)
     await state.set_state(AddBank.name)
 
 
 @bank_router.callback_query(StateFilter(None), F.data.startswith('add_bank'))
-async def add_bank(message: types.Message, state: FSMContext):
-    await message.answer("Введите название банка")
+async def add_bank(callback: types.CallbackQuery, state: FSMContext):
+    await callback.message.answer("Введите название банка", reply_markup=BANK_CANCEL_FSM)
     await state.set_state(AddBank.name)
 
 
-@bank_router.message(StateFilter('*'), Command('отмена банка'))
-@bank_router.message(StateFilter('*'), F.text.casefold() == 'отмена банка')
+@bank_router.message(StateFilter('*'), Command('Отменить действие с банком'))
+@bank_router.message(StateFilter('*'), F.text.casefold() == 'отменить действие с банком')
 async def cancel_handler(message: types.Message, state: FSMContext) -> None:
     current_state = await state.get_state()
     if current_state is None:
         return
 
     await state.clear()
-    await message.answer("Действия отменены")
+    await message.answer("Действия отменены", reply_markup=types.ReplyKeyboardRemove())
 
 
 @bank_router.message(AddBank.name, or_f(F.text))
@@ -119,7 +138,8 @@ async def add_name(message: types.Message, state: FSMContext, session: AsyncSess
         await state.clear()
 
     except Exception as e:
-        await message.answer(f"Ошибка {e}, обратитесь к @gigcomm, чтобы исправить ее!")
+        print(f"Ошибка {e}")
+        await message.answer(f"Ошибка, обратитесь к @gigcomm, чтобы исправить ее!")
         await state.clear()
 
     AddBank.bank_for_change = None

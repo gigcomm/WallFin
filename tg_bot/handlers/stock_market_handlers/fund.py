@@ -3,11 +3,21 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from database.orm_query import orm_add_fund, orm_get_fund, orm_update_fund
 from tg_bot.handlers.common_imports import *
+from tg_bot.keyboards.reply import get_keyboard
 from parsers.tinkoff_invest_API import get_price_fund
-from tg_bot.keyboards.inline import get_callback_btns
 
 fund_router = Router()
 
+FUND_CANCEL_FSM = get_keyboard(
+    "Отменить действие с фондом",
+    placeholder="Используйте кнопки ниже для отмены",
+)
+
+FUND_CANCEL_AND_BACK_FSM = get_keyboard(
+"Отменить действие с фондом",
+    "Назад к предыдущему шагу для фонда",
+    placeholder="Используйте кнопки ниже для действий",
+)
 
 # @fund_router.callback_query(lambda callback_query: callback_query.data.startswith("fund_"))
 # async def process_account_selection(callback_query: CallbackQuery, session: AsyncSession):
@@ -55,30 +65,28 @@ class AddFund(StatesGroup):
 
 @fund_router.callback_query(StateFilter(None), F.data.startswith('change_fund'))
 async def change_fund(callback_query: types.CallbackQuery, state: FSMContext, session: AsyncSession):
-    fund_id = callback_query.data.split(":")[-1]
+    fund_id = int(callback_query.data.split(":")[-1])
     await state.update_data(fund_id=fund_id)
-    fund_for_change = await orm_get_fund(session, int(fund_id))
+    fund_for_change = await orm_get_fund(session, fund_id)
     AddFund.fund_for_change = None
 
     AddFund.fund_for_change = fund_for_change
 
     await callback_query.answer()
-    await callback_query.message.answer("Введите тикер фонда, например, TITR")
+    await callback_query.message.answer("Введите тикер фонда, например, TITR", reply_markup=FUND_CANCEL_AND_BACK_FSM)
     await state.set_state(AddFund.name)
 
 
 @fund_router.callback_query(StateFilter(None), F.data.startswith('add_fund'))
-async def add_cryptomarket(callback_query: CallbackQuery, state: FSMContext):
+async def add_fund(callback_query: CallbackQuery, state: FSMContext):
     stockmarket_id = int(callback_query.data.split(":")[-1])
     await state.update_data(stockmarket_id=stockmarket_id)
-    await callback_query.message.answer(
-        "Введите тикер фонда, например, TITR", reply_markup=types.ReplyKeyboardRemove()
-    )
+    await callback_query.message.answer("Введите тикер фонда, например, TITR", reply_markup=FUND_CANCEL_FSM)
     await state.set_state(AddFund.name)
 
 
-@fund_router.message(StateFilter('*'), Command('отмена фонда'))
-@fund_router.message(StateFilter('*'), F.text.casefold() == 'отмена фонда')
+@fund_router.message(StateFilter('*'), Command('Отменить действие с фондом'))
+@fund_router.message(StateFilter('*'), F.text.casefold() == 'отменить действие с фондом')
 async def cancel_handler(message: types.Message, state: FSMContext) -> None:
     current_state = await state.get_state()
     if current_state is None:
@@ -86,16 +94,16 @@ async def cancel_handler(message: types.Message, state: FSMContext) -> None:
     if AddFund.fund_for_change:
         AddFund.fund_for_change = None
     await state.clear()
-    await message.answer("Действия отменены")
+    await message.answer("Действия отменены", reply_markup=types.ReplyKeyboardRemove())
 
 
-@fund_router.message(StateFilter('*'), Command('назад фонда'))
-@fund_router.message(StateFilter('*'), F.text.casefold() == "назад фонда")
+@fund_router.message(StateFilter('*'), Command('Назад к предыдущему шагу для фонда'))
+@fund_router.message(StateFilter('*'), F.text.casefold() == "назад к предыдущему шагу для фонда")
 async def back_handler(message: types.Message, state: FSMContext) -> None:
     current_state = await state.get_state()
 
-    if current_state is None:
-        await message.answer("Предыдущего шага нет, введите название счета или напишите 'отмена'")
+    if current_state == AddFund.name:
+        await message.answer("Предыдущего шага нет, введите название валюты или нажмите ниже на кнопку отмены")
         return
 
     previous = None

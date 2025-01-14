@@ -8,8 +8,20 @@ from database.orm_query import (orm_add_currency,
 from tg_bot.handlers.common_imports import *
 from parsers.parser_currency_rate import get_exchange_rate
 from tg_bot.keyboards.inline import get_callback_btns
+from tg_bot.keyboards.reply import get_keyboard
 
 currency_router = Router()
+
+CURRENCY_CANCEL_FSM = get_keyboard(
+    "Отменить действие с валютой",
+    placeholder="Используйте кнопки ниже для отмены",
+)
+
+CURRENCY_CANCEL_AND_BACK_FSM = get_keyboard(
+"Отменить действие с валютой",
+    "Назад к предыдущему шагу для валюты",
+    placeholder="Используйте кнопки ниже для действий",
+)
 
 
 # @currency_router.callback_query(lambda callback_query: callback_query.data.startswith("currencies_"))
@@ -60,14 +72,14 @@ class AddCurrency(StatesGroup):
 
 @currency_router.callback_query(StateFilter(None), F.data.startswith("change_currency"))
 async def change_currency(callback: types.CallbackQuery, state: FSMContext, session: AsyncSession):
-    currency_id = callback.data.split(":")[-1]
+    currency_id = int(callback.data.split(":")[-1])
     await state.update_data(currency_id=currency_id)
-    currency_for_change = await orm_get_currency(session, int(currency_id))
+    currency_for_change = await orm_get_currency(session, currency_id)
 
     AddCurrency.currency_for_change = currency_for_change
 
     await callback.answer()
-    await callback.message.answer("Введите название валюты, например USD")
+    await callback.message.answer("Введите название валюты, например USD", reply_markup=CURRENCY_CANCEL_AND_BACK_FSM)
     await state.set_state(AddCurrency.name)
 
 
@@ -75,14 +87,12 @@ async def change_currency(callback: types.CallbackQuery, state: FSMContext, sess
 async def add_currency(callback_query: CallbackQuery, state: FSMContext):
     bank_id = int(callback_query.data.split(':')[-1])
     await state.update_data(bank_id=bank_id)
-    await (callback_query.message.answer(
-        "Введите название валюты, например USD", reply_markup=types.ReplyKeyboardRemove()
-    ))
+    await (callback_query.message.answer("Введите название валюты, например USD", reply_markup=CURRENCY_CANCEL_FSM))
     await state.set_state(AddCurrency.name)
 
 
-@currency_router.message(StateFilter('*'), Command("отмена валюта"))
-@currency_router.message(StateFilter('*'), F.text.casefold() == "отмена валюта")
+@currency_router.message(StateFilter('*'), Command("Отменить действие с валютой"))
+@currency_router.message(StateFilter('*'), F.text.casefold() == "отменить действие с валютой")
 async def cancel_handler(message: types.Message, state: FSMContext) -> None:
     current_state = await state.get_state()
     if current_state is None:
@@ -90,19 +100,21 @@ async def cancel_handler(message: types.Message, state: FSMContext) -> None:
     if AddCurrency.currency_for_change:
         AddCurrency.currency_for_change = None
     await state.clear()
-    await message.answer("Действия отменены")
+    await message.answer("Действия отменены", reply_markup=types.ReplyKeyboardRemove())
 
 
-@currency_router.message(StateFilter('*'), Command("назад валюта"))
-@currency_router.message(StateFilter('*'), F.text.casefold() == "назад валюта")
+@currency_router.message(StateFilter('*'), Command("Назад к предыдущему шагу для валюты"))
+@currency_router.message(StateFilter('*'), F.text.casefold() == "назад к предыдущему шагу для валюты")
 async def back_handler(message: types.Message, state: FSMContext) -> None:
     current_state = await state.get_state()
-    if current_state is None:
-        await message.answer("Предыдущего шага нет, введите название валюты или напишите 'отмена'")
+
+    if current_state == AddCurrency.name:
+        await message.answer("Предыдущего шага нет, введите название валюты или нажмите ниже на кнопку отмены")
         return
 
     previous = None
     for step in AddCurrency.__all_states__:
+
         if step.state == current_state:
             await state.set_state(previous)
             await message.answer(f"Вы вернулись к прошлому шагу \n {AddCurrency.texts[previous.state]}")

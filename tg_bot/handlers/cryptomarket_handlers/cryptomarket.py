@@ -1,6 +1,7 @@
 from aiogram.types import CallbackQuery
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from database.models import CryptoMarket
 from database.orm_query import (
     orm_add_cryptomarket,
     orm_delete_cryptomarket,
@@ -10,10 +11,15 @@ from database.orm_query import (
 from tg_bot.handlers.common_imports import *
 from tg_bot.handlers.cryptomarket_handlers.cryptocurrency import cryptocurrency_router
 from tg_bot.keyboards.inline import get_callback_btns
+from tg_bot.keyboards.reply import get_keyboard
 
 cryptomarket_router = Router()
 cryptomarket_router.include_router(cryptocurrency_router)
 
+CRYPTOMARKET_CANCEL_FSM = get_keyboard(
+    "Отменить действие с криптобиржей",
+    placeholder="Нажмите на кнопку ниже, чтобы отменить добавление/изменение",
+)
 
 # @cryptomarket_router.message(F.text == 'Криптобиржи')
 # async def starting_at_cryptomarket(message: types.Message, session: AsyncSession):
@@ -51,44 +57,42 @@ class AddCryptomarket(StatesGroup):
 
 
 # НАПИСАТЬ ДОПОЛНИТЕЛЬНОЕ ПОДВЕРЖДЕНИЕ НА УДАЛЕНИЕ
-@cryptomarket_router.callback_query(F.data.startswith('delete_cryptomarket'))
-async def delete_cryptomarket(callback: types.CallbackQuery, session: AsyncSession):
-    cryptomarket_id = callback.data.split(":")[-1]
-    await orm_delete_cryptomarket(session, int(cryptomarket_id))
-
-    await callback.answer("Криптобиржа удалена")
-    await callback.message.answer("Криптобиржа удалена")
+# @cryptomarket_router.callback_query(F.data.startswith('delete_cryptomarket'))
+# async def delete_cryptomarket(callback: types.CallbackQuery, session: AsyncSession):
+#     cryptomarket_id = callback.data.split(":")[-1]
+#     await orm_delete_cryptomarket(session, int(cryptomarket_id))
+#
+#     await callback.answer("Криптобиржа удалена")
+#     await callback.message.answer("Криптобиржа удалена")
 
 
 @cryptomarket_router.callback_query(StateFilter(None), F.data.startswith('change_cryptomarket'))
-async def change_cryptomarket(callback: types.CallbackQuery, state: FSMContext, session: AsyncSession):
-    cryptomarket_id = callback.data.split(":")[-1]
-    cryptomarket_for_change = await orm_get_cryptomarket_by_id(session, int(cryptomarket_id))
+async def change_cryptomarket(callback_query: CallbackQuery, state: FSMContext, session: AsyncSession):
+    cryptomarket_id = int(callback_query.data.split(":")[-1])
+    cryptomarket_for_change = await orm_get_cryptomarket_by_id(session, cryptomarket_id)
 
     AddCryptomarket.cryptomarket_for_change = cryptomarket_for_change
 
-    await callback.answer()
-    await callback.message.answer("Введите название криптобиржи")
+    await callback_query.answer()
+    await callback_query.message.answer("Введите название криптобиржи", reply_markup=CRYPTOMARKET_CANCEL_FSM)
     await state.set_state(AddCryptomarket.name)
 
 
 @cryptomarket_router.callback_query(StateFilter(None), F.data.startswith('add_cryptomarket'))
-async def add_cryptomarket(message: types.Message, state: FSMContext):
-    await message.answer(
-        "Введите название криптобиржи", reply_markup=types.ReplyKeyboardRemove()
-    )
+async def add_cryptomarket(callback_query: CallbackQuery, state: FSMContext):
+    await callback_query.message.answer("Введите название криптобиржи", reply_markup=CRYPTOMARKET_CANCEL_FSM)
     await state.set_state(AddCryptomarket.name)
 
 
-@cryptomarket_router.message(StateFilter('*'), Command('отмена криптобиржи'))
-@cryptomarket_router.message(StateFilter('*'), F.text.casefold() == 'отмена криптобиржи')
+@cryptomarket_router.message(StateFilter('*'), Command('Отменить действие с криптобиржей'))
+@cryptomarket_router.message(StateFilter('*'), F.text.casefold() == 'отменить действие с криптобиржей')
 async def cancel_handler(message: types.Message, state: FSMContext) -> None:
     current_state = await state.get_state()
     if current_state is None:
         return
 
     await state.clear()
-    await message.answer("Действия отменены")
+    await message.answer("Действия отменены", reply_markup=types.ReplyKeyboardRemove())
 
 
 @cryptomarket_router.message(AddCryptomarket.name, or_f(F.text))

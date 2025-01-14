@@ -12,11 +12,16 @@ from tg_bot.handlers.common_imports import *
 from tg_bot.handlers.stock_market_handlers.fund import fund_router
 from tg_bot.handlers.stock_market_handlers.share import share_router
 from tg_bot.keyboards.inline import get_callback_btns
+from tg_bot.keyboards.reply import get_keyboard
 
 stock_market_router = Router()
 stock_market_router.include_router(share_router)
 stock_market_router.include_router(fund_router)
 
+STOCKMARKET_CANCEL_FSM = get_keyboard(
+    "Отменить действие с финбиржей",
+    placeholder="Нажмите на кнопку ниже, чтобы отменить добавление/изменение",
+)
 
 # @stock_market_router.message(F.text == 'Финбиржи')
 # async def starting_at_stockmarket(message: types.Message, session: AsyncSession):
@@ -54,42 +59,42 @@ class AddStockMarket(StatesGroup):
 
 
 # НАПИСАТЬ ДОПОЛНИТЕЛЬНОЕ ПОДВЕРЖДЕНИЕ НА УДАЛЕНИЕ
-@stock_market_router.callback_query(F.data.startswith('delete_stockmarket'))
-async def delete_stock_market(callback: types.CallbackQuery, session: AsyncSession):
-    stock_market_id = callback.data.split(":")[-1]
-    await orm_delete_stock_market(session, int(stock_market_id))
-
-    await callback.answer("Криптобиржа удалена")
-    await callback.message.answer("Криптобиржа удалена")
+# @stock_market_router.callback_query(F.data.startswith('delete_stockmarket'))
+# async def delete_stock_market(callback: types.CallbackQuery, session: AsyncSession):
+#     stock_market_id = callback.data.split(":")[-1]
+#     await orm_delete_stock_market(session, int(stock_market_id))
+#
+#     await callback.answer("Криптобиржа удалена")
+#     await callback.message.answer("Криптобиржа удалена")
 
 
 @stock_market_router.callback_query(StateFilter(None), F.data.startswith('change_stockmarket'))
-async def change_stock_market(callback: types.CallbackQuery, state: FSMContext, session: AsyncSession):
-    stock_market_id = callback.data.split(":")[-1]
+async def change_stock_market(callback_query: CallbackQuery, state: FSMContext, session: AsyncSession):
+    stock_market_id = callback_query.data.split(":")[-1]
     stock_market_for_change = await orm_get_stock_market_by_id(session, int(stock_market_id))
 
     AddStockMarket.stock_market_for_change = stock_market_for_change
 
-    await callback.answer()
-    await callback.message.answer("Введите название финбиржи")
+    await callback_query.answer()
+    await callback_query.message.answer("Введите название финбиржи", reply_markup=STOCKMARKET_CANCEL_FSM)
     await state.set_state(AddStockMarket.name)
 
 
 @stock_market_router.callback_query(StateFilter(None), F.data.startswith('add_stockmarket'))
-async def add_stock_market(message: types.Message, state: FSMContext):
-    await message.answer("Введите название финбиржи")
+async def add_stock_market(callback_query: CallbackQuery, state: FSMContext):
+    await callback_query.message.answer("Введите название финбиржи", reply_markup=STOCKMARKET_CANCEL_FSM)
     await state.set_state(AddStockMarket.name)
 
 
-@stock_market_router.message(StateFilter('*'), Command('отмена финбиржи'))
-@stock_market_router.message(StateFilter('*'), F.text.casefold() == 'отмена финбиржи')
+@stock_market_router.message(StateFilter('*'), Command('Отменить действие с финбиржей'))
+@stock_market_router.message(StateFilter('*'), F.text.casefold() == 'отменить действие с финбиржей')
 async def cancel_handler(message: types.Message, state: FSMContext) -> None:
     current_state = await state.get_state()
     if current_state is None:
         return
 
     await state.clear()
-    await message.answer("Действия отменены")
+    await message.answer("Действия отменены", reply_markup=types.ReplyKeyboardRemove())
 
 
 @stock_market_router.message(AddStockMarket.name, or_f(F.text))

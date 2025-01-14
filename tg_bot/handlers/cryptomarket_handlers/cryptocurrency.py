@@ -8,9 +8,20 @@ from database.orm_query import (
 
 from tg_bot.handlers.common_imports import *
 from parsers.Bybit_API import get_price_cryptocurrency
+from tg_bot.keyboards.reply import get_keyboard
 
 cryptocurrency_router = Router()
 
+CRYPTOCURRENCY_CANCEL_FSM = get_keyboard(
+    "Отменить действие с криптовалютой",
+    placeholder="Используйте кнопки ниже для отмены",
+)
+
+CRYPTOCURRENCY_CANCEL_AND_BACK_FSM = get_keyboard(
+"Отменить действие с криптовалютой",
+    "Назад к предыдущему шагу для криптовалюты",
+    placeholder="Используйте кнопки ниже для действий",
+)
 
 class AddСryptocurrency(StatesGroup):
     cryptocurrency_id = State()
@@ -32,14 +43,14 @@ class AddСryptocurrency(StatesGroup):
 
 
 @cryptocurrency_router.callback_query(StateFilter(None), F.data.startswith("change_cryptocurrency"))
-async def change_cryptocurrency(callback: types.CallbackQuery, state: FSMContext, session: AsyncSession):
-    cryptocurrency_id = callback.data.split(":")[-1]
-    cryptocurrency_for_change = await orm_get_cryptocurrency_by_cryptomarket_id(session, int(cryptocurrency_id))
+async def change_cryptocurrency(callback_query: CallbackQuery, state: FSMContext, session: AsyncSession):
+    cryptocurrency_id = int(callback_query.data.split(":")[-1])
+    cryptocurrency_for_change = await orm_get_cryptocurrency_by_cryptomarket_id(session, cryptocurrency_id)
     await state.update_data(cryptocurrency_id=cryptocurrency_id)
     AddСryptocurrency.cryptocurrency_for_change = cryptocurrency_for_change
 
-    await callback.answer()
-    await callback.message.answer("Введите название криптовалюты")
+    await callback_query.answer()
+    await callback_query.message.answer("Введите название криптовалюты", reply_markup=CRYPTOCURRENCY_CANCEL_AND_BACK_FSM)
     await state.set_state(AddСryptocurrency.name)
 
 
@@ -48,12 +59,12 @@ async def add_cryptomarket(callback_query: CallbackQuery, state: FSMContext):
     cryptomarket_id = int(callback_query.data.split(":")[-1])
     await state.update_data(cryptomarket_id=cryptomarket_id)
     await callback_query.message.answer(
-        "Введите название криптовалюты в сокращенном виде, например BTC")
+        "Введите название криптовалюты в сокращенном виде, например BTC", reply_markup=CRYPTOCURRENCY_CANCEL_FSM)
     await state.set_state(AddСryptocurrency.name)
 
 
-@cryptocurrency_router.message(StateFilter('*'), Command("отмена криптовалюты"))
-@cryptocurrency_router.message(StateFilter('*'), F.text.casefold() == "отмена криптовалюты")
+@cryptocurrency_router.message(StateFilter('*'), Command("Отменить действие с криптовалютой"))
+@cryptocurrency_router.message(StateFilter('*'), F.text.casefold() == "отменить действие с криптовалютой")
 async def cancel_handler(message: types.Message, state: FSMContext) -> None:
     current_state = await state.get_state()
     if current_state is None:
@@ -61,16 +72,16 @@ async def cancel_handler(message: types.Message, state: FSMContext) -> None:
     if AddСryptocurrency.cryptocurrency_for_change:
         AddСryptocurrency.cryptocurrency_for_change = None
     await state.clear()
-    await message.answer("Действия отменены")
+    await message.answer("Действия отменены", reply_markup=types.ReplyKeyboardRemove())
 
 
-@cryptocurrency_router.message(StateFilter('*'), Command("назад криптовалюты"))
-@cryptocurrency_router.message(StateFilter('*'), F.text.casefold() == "назад криптовалюты")
+@cryptocurrency_router.message(StateFilter('*'), Command("Назад к предыдущему шагу для криптовалюты"))
+@cryptocurrency_router.message(StateFilter('*'), F.text.casefold() == "назад к предыдущему шагу для криптовалюты")
 async def back_handler(message: types.Message, state: FSMContext) -> None:
     current_state = await state.get_state()
 
-    if current_state is None:
-        await message.answer("Предыдущего шага нет, введите название счета или напишите 'отмена'")
+    if current_state == AddСryptocurrency.name:
+        await message.answer("Предыдущего шага нет, введите название валюты или нажмите ниже на кнопку отмены")
         return
 
     previous = None
