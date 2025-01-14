@@ -1,3 +1,5 @@
+from typing import Optional
+
 from aiogram.filters.callback_data import CallbackData
 from aiogram.types import InlineKeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
@@ -11,6 +13,7 @@ class MenuCallBack(CallbackData, prefix="menu"):
     cryptomarket_id: int | None = None
     stockmarket_id: int | None = None
     page: int = 1
+    action: Optional[str] = None
 
 
 def get_user_main_btns(*, level: int, user_tg_id: int, sizes: tuple[int] = (1,)):
@@ -141,12 +144,28 @@ def get_user_assets_bank_btns(*, level: int, assets_bank: list, bank_id: int, si
 
     keyboard.add(InlineKeyboardButton(
         text='Удалить банк',
-        callback_data=f'delete_bank:{bank_id}'
+        callback_data=MenuCallBack(level=level, menu_name="delete_bank", bank_id=bank_id).pack()
     ))
 
     keyboard.add(InlineKeyboardButton(
         text='Назад',
         callback_data=MenuCallBack(level=level - 1, menu_name='Банки').pack()
+    ))
+
+    return keyboard.adjust(*sizes).as_markup()
+
+
+def get_confirm_delete_bank(*, level: int, bank_name: str, bank_id: int, sizes: tuple[int] = (2,)):
+    keyboard = InlineKeyboardBuilder()
+
+    keyboard.add(InlineKeyboardButton(
+        text="Да, удалить",
+        callback_data=MenuCallBack(level=level - 1, menu_name='Банки', bank_id=bank_id, action="confirm_delete").pack()
+    ))
+
+    keyboard.add(InlineKeyboardButton(
+        text="Отмена",
+        callback_data=MenuCallBack(level=level, menu_name=bank_name, bank_id=bank_id).pack()
     ))
 
     return keyboard.adjust(*sizes).as_markup()
@@ -170,12 +189,29 @@ def get_user_assets_stockmarkets_btns(*, level: int, assets_stockmarkets: list, 
 
     keyboard.add(InlineKeyboardButton(
         text='Удалить финбиржу',
-        callback_data=f'delete_stockmarket:{stockmarket_id}'
+        callback_data=MenuCallBack(level=level, menu_name="delete_stockmarket", stockmarket_id=stockmarket_id).pack()
     ))
 
     keyboard.add(InlineKeyboardButton(
         text='Назад',
         callback_data=MenuCallBack(level=level - 1, menu_name='Финбиржи').pack()
+    ))
+
+    return keyboard.adjust(*sizes).as_markup()
+
+
+def get_confirm_delete_stockmarket(*, level: int, stockmarket_name: str, stockmarket_id: int, sizes: tuple[int] = (2,)):
+    keyboard = InlineKeyboardBuilder()
+
+    keyboard.add(InlineKeyboardButton(
+        text="Да, удалить",
+        callback_data=MenuCallBack(level=level - 1, menu_name='Финбиржи', stockmarket_id=stockmarket_id,
+                                   action="confirm_delete").pack()
+    ))
+
+    keyboard.add(InlineKeyboardButton(
+        text="Отмена",
+        callback_data=MenuCallBack(level=level, menu_name=stockmarket_name, stockmarket_id=stockmarket_id).pack()
     ))
 
     return keyboard.adjust(*sizes).as_markup()
@@ -200,12 +236,29 @@ def get_user_assets_cryptomarkets_btns(*, level: int, assets_cryptomarkets: list
 
     keyboard.add(InlineKeyboardButton(
         text='Удалить криптобиржу',
-        callback_data=f'delete_cryptomarket:{cryptomarket_id}'
+        callback_data=MenuCallBack(level=level, menu_name="delete_cryptomarket", cryptomarket_id=cryptomarket_id).pack()
     ))
 
     keyboard.add(InlineKeyboardButton(
         text='Назад',
         callback_data=MenuCallBack(level=level - 1, menu_name='Криптобиржи').pack()
+    ))
+
+    return keyboard.adjust(*sizes).as_markup()
+
+
+def get_confirm_delete_cryptomarket(*, level: int, cryptomarket_name: str, cryptomarket_id: int, sizes: tuple[int] = (2,)):
+    keyboard = InlineKeyboardBuilder()
+
+    keyboard.add(InlineKeyboardButton(
+        text="Да, удалить",
+        callback_data=MenuCallBack(level=level - 1, menu_name='Криптобиржи', cryptomarket_id=cryptomarket_id,
+                                   action="confirm_delete").pack()
+    ))
+
+    keyboard.add(InlineKeyboardButton(
+        text="Отмена",
+        callback_data=MenuCallBack(level=level, menu_name=cryptomarket_name, cryptomarket_id=cryptomarket_id).pack()
     ))
 
     return keyboard.adjust(*sizes).as_markup()
