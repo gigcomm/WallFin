@@ -4,8 +4,20 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from database.orm_query import orm_add_account, orm_delete_account, orm_update_account, orm_get_account
 from tg_bot.handlers.common_imports import *
 from tg_bot.keyboards.inline import get_callback_btns
+from tg_bot.keyboards.reply import get_keyboard
 
 account_router = Router()
+
+ACCOUNT_CANCEL_FSM = get_keyboard(
+    "Отменить действие со счетом",
+    placeholder="Используйте кнопки ниже для отмены",
+)
+
+ACCOUNT_CANCEL_AND_BACK_FSM = get_keyboard(
+    "Отменить действие со счетом",
+    "Назад к предыдущему шагу",
+    placeholder="Используйте кнопки ниже для действий",
+)
 
 
 # @account_router.callback_query(lambda callback_query: callback_query.data.startswith("accounts_"))
@@ -46,15 +58,16 @@ class AddAccount(StatesGroup):
 
 
 @account_router.callback_query(StateFilter(None), F.data.startswith('change_account'))
-async def change_account(callback_query: types.CallbackQuery, state: FSMContext, session: AsyncSession):
-    account_id = callback_query.data.split(":")[-1]
+async def change_account(callback_query: CallbackQuery, state: FSMContext, session: AsyncSession):
+    account_id = int(callback_query.data.split(":")[-1])
     await state.update_data(account_id=account_id)
-    account_for_change = await orm_get_account(session, int(account_id))
+    account_for_change = await orm_get_account(session, account_id)
     AddAccount.account_for_change = account_for_change
 
     await callback_query.answer()
     await callback_query.message.answer("В режиме изменения, если поставить точку, данное поле будет прежним,"
-                                  " а процесс перейдет к следующему полю объекта. \n Введите название счета")
+                                        " а процесс перейдет к следующему полю объекта. \n Введите название счета",
+                                        reply_markup=ACCOUNT_CANCEL_AND_BACK_FSM)
     await state.set_state(AddAccount.name)
 
 
@@ -62,14 +75,12 @@ async def change_account(callback_query: types.CallbackQuery, state: FSMContext,
 async def add_account(callback_query: CallbackQuery, state: FSMContext):
     bank_id = int(callback_query.data.split(':')[-1])
     await state.update_data(bank_id=bank_id)
-    await callback_query.message.answer(
-        "Введите название счета", reply_markup=types.ReplyKeyboardRemove()
-    )
+    await callback_query.message.answer("Введите название счета", reply_markup=ACCOUNT_CANCEL_FSM)
     await state.set_state(AddAccount.name)
 
 
-@account_router.message(StateFilter('*'), Command('отмена счет'))
-@account_router.message(StateFilter('*'), F.text.casefold() == 'отмена счет')
+@account_router.message(StateFilter('*'), Command('Отменить действие со счетом'))
+@account_router.message(StateFilter('*'), F.text.casefold() == 'отменить действие со счетом')
 async def cancel_handler(message: types.Message, state: FSMContext) -> None:
     current_state = await state.get_state()
     if current_state is None:
@@ -77,16 +88,16 @@ async def cancel_handler(message: types.Message, state: FSMContext) -> None:
     if AddAccount.account_for_change:
         AddAccount.account_for_change = None
     await state.clear()
-    await message.answer("Действия отменены")
+    await message.answer("Действия отменены", reply_markup=types.ReplyKeyboardRemove())
 
 
-@account_router.message(StateFilter('*'), Command('назад счет'))
-@account_router.message(StateFilter('*'), F.text.casefold() == "назад счет")
+@account_router.message(StateFilter('*'), Command('Назад к предыдущему шагу'))
+@account_router.message(StateFilter('*'), F.text.casefold() == "назад к предыдущему шагу")
 async def back_handler(message: types.Message, state: FSMContext) -> None:
     current_state = await state.get_state()
 
-    if current_state is None:
-        await message.answer("Предыдущего шага нет, введите название счета или напишите 'отмена'")
+    if current_state == AddAccount.name:
+        await message.answer("Предыдущего шага нет, введите название счета или нажмите ниже на кнопку отмены")
         return
 
     previous = None

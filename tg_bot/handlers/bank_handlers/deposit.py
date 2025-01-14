@@ -6,8 +6,20 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from database.orm_query import orm_delete_deposit, orm_add_deposit, orm_update_deposit, orm_get_deposit
 from tg_bot.handlers.common_imports import *
 from tg_bot.keyboards.inline import get_callback_btns
+from tg_bot.keyboards.reply import get_keyboard
 
 deposit_router = Router()
+
+DEPOSIT_CANCEL_FSM = get_keyboard(
+    "Отменить действие с вкладом",
+    placeholder="Используйте кнопки ниже для отмены",
+)
+
+DEPOSIT_CANCEL_AND_BACK_FSM = get_keyboard(
+    "Отменить действие с вкладом",
+    "Назад к предыдущему шагу для вклада",
+    placeholder="Используйте кнопки ниже для действий",
+)
 
 
 # @deposit_router.callback_query(lambda callback_query: callback_query.data.startswith("deposits_"))
@@ -56,13 +68,13 @@ class AddDeposit(StatesGroup):
 
 @deposit_router.callback_query(StateFilter(None), F.data.startswith("change_deposit"))
 async def change_currency(callback_query: types.CallbackQuery, state: FSMContext, session: AsyncSession):
-    deposit_id = callback_query.data.split(":")[-1]
+    deposit_id = int(callback_query.data.split(":")[-1])
     await state.update_data(deposit_id=deposit_id)
-    deposit_for_change = await orm_get_deposit(session, int(deposit_id))
+    deposit_for_change = await orm_get_deposit(session, deposit_id)
     AddDeposit.deposit_for_change = deposit_for_change
 
     await callback_query.answer()
-    await callback_query.message.answer("Введите название вклада:")
+    await callback_query.message.answer("Введите название вклада:", reply_markup=DEPOSIT_CANCEL_AND_BACK_FSM)
     await state.set_state(AddDeposit.name)
 
 
@@ -70,14 +82,12 @@ async def change_currency(callback_query: types.CallbackQuery, state: FSMContext
 async def add_deposit(callback_query: CallbackQuery, state: FSMContext):
     bank_id = int(callback_query.data.split(':')[-1])
     await state.update_data(bank_id=bank_id)
-    await callback_query.message.answer(
-        "Введите название вклада", reply_markup=types.ReplyKeyboardRemove()
-    )
+    await callback_query.message.answer("Введите название вклада", reply_markup=DEPOSIT_CANCEL_FSM)
     await state.set_state(AddDeposit.name)
 
 
-@deposit_router.message(StateFilter('*'), Command('отмена вклад'))
-@deposit_router.message(StateFilter('*'), F.text.casefold() == 'отмена вклад')
+@deposit_router.message(StateFilter('*'), Command('Отменить действие с вкладом'))
+@deposit_router.message(StateFilter('*'), F.text.casefold() == 'отменить действие с вкладом')
 async def cancel_handler(message: types.Message, state: FSMContext) -> None:
     current_state = await state.get_state()
     if current_state is None:
@@ -85,15 +95,16 @@ async def cancel_handler(message: types.Message, state: FSMContext) -> None:
     if AddDeposit.deposit_for_change:
         AddDeposit.deposit_for_change = None
     await state.clear()
-    await message.answer("Действия отменены")
+    await message.answer("Действия отменены", reply_markup=types.ReplyKeyboardRemove())
 
 
-@deposit_router.message(StateFilter('*'), Command("назад вклад"))
-@deposit_router.message(StateFilter('*'), F.text.casefold() == "назад вклад")
+@deposit_router.message(StateFilter('*'), Command("Назад к предыдущему шагу для вклада"))
+@deposit_router.message(StateFilter('*'), F.text.casefold() == "назад к предыдущему шагу для вклада")
 async def back_handler(message: types.Message, state: FSMContext) -> None:
     current_state = await state.get_state()
+
     if current_state == AddDeposit.name:
-        await message.answer("Предыдущего шага нет, введите название вклада или напишите 'отмена'")
+        await message.answer("Предыдущего шага нет, введите название валюты или нажмите ниже на кнопку отмены")
         return
 
     previous = None
