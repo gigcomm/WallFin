@@ -5,7 +5,7 @@ from aiogram.filters import CommandStart, Command
 from aiogram.types import CallbackQuery, InputMediaPhoto, Message
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from database.orm_query import orm_add_user
+from database.orm_query import orm_add_user, orm_delete_bank, orm_delete_stock_market, orm_delete_cryptomarket
 from tg_bot.handlers.menu_processing import get_menu_content
 from tg_bot.keyboards.inline import MenuCallBack
 from finance.total_balance import calculate_total_balance
@@ -23,6 +23,23 @@ async def start_cmd(message: types.Message, session: AsyncSession):
 @user_private_router.callback_query(MenuCallBack.filter())
 async def menu_command(callback_query: CallbackQuery, callback_data: MenuCallBack, session: AsyncSession):
     menu_name = callback_data.menu_name
+
+    if callback_data.action == "confirm_delete" and callback_data.bank_id:
+        bank_id = int(callback_data.bank_id)
+        await orm_delete_bank(session, bank_id)
+        await callback_query.answer("Банк удален")
+
+    elif callback_data.action == "confirm_delete" and callback_data.stockmarket_id:
+        stock_market_id = callback_data.stockmarket_id
+        await orm_delete_stock_market(session, int(stock_market_id))
+        await callback_query.answer("Финбиржа удалена")
+
+    elif callback_data.action == "confirm_delete" and callback_data.cryptomarket_id:
+        cryptomarket_id = callback_data.cryptomarket_id
+        await orm_delete_cryptomarket(session, int(cryptomarket_id))
+        await callback_query.answer("Криптобиржа удалена")
+
+
 
     if menu_name == "total_balance":
         user_tg_id = int(callback_data.user_tg_id)
