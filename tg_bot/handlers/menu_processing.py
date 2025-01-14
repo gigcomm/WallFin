@@ -1,3 +1,5 @@
+from typing import Optional
+
 from aiogram.types import InputMediaPhoto
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -25,7 +27,8 @@ from tg_bot.keyboards.inline import (
     get_user_assets_cryptomarkets_btns,
     get_user_assets_stockmarkets_btns,
     get_deposit_btns,
-    get_account_btns, get_currency_btns, get_cryptocurrencies_btns, get_shares_btns, get_funds_btns)
+    get_account_btns, get_currency_btns, get_cryptocurrencies_btns, get_shares_btns, get_funds_btns,
+    get_confirm_delete_bank, get_confirm_delete_stockmarket, get_confirm_delete_cryptomarket)
 
 from utils.paginator import Paginator
 
@@ -81,7 +84,8 @@ async def cryptomarkets(session, level, menu_name, user_tg_id):
     kbds = get_user_cryptomarkets_btns(level=level, cryptomarkets=cryptomarkets, user_tg_id=user_tg_id)
     return image, kbds
 
-#определен общая сумма активов для банка, нужен процесс тестирования
+
+# определен общая сумма активов для банка, нужен процесс тестирования
 async def choose_banks(session, level, menu_name, bank_id):
     # banner = await orm_get_banner(session, menu_name)
     # image = InputMediaPhoto(media=banner.image, caption=banner.description)
@@ -108,6 +112,13 @@ async def choose_banks(session, level, menu_name, bank_id):
     return caption, kbds
 
 
+async def confirm_delete_bank(session, level, bank_id):
+    bank = await orm_get_bank_by_id(session, bank_id)
+    caption = f"Вы уверены, что хотите удалить банк {bank.name}? Это действие необратимо."
+    kbds = get_confirm_delete_bank(level=level, bank_name=bank.name, bank_id=bank_id)
+    return caption, kbds
+
+
 async def choose_cryptomarkets(session, level, menu_name, cryptomarket_id):
     # banner = await orm_get_banner(session, menu_name)
     # image = InputMediaPhoto(media=banner.image, caption=banner.description)
@@ -123,6 +134,13 @@ async def choose_cryptomarkets(session, level, menu_name, cryptomarket_id):
 
     kbds = get_user_assets_cryptomarkets_btns(level=level, assets_cryptomarkets=assets_cryptomarkets,
                                               cryptomarket_id=cryptomarket.id)
+    return caption, kbds
+
+
+async def confirm_delete_stockmarket(session, level, stockmarket_id):
+    stockmarket = await orm_get_stock_market_by_id(session, stockmarket_id)
+    caption = f"Вы уверены, что хотите удалить финбиржу {stockmarket.name}? Это действие необратимо."
+    kbds = get_confirm_delete_stockmarket(level=level, stockmarket_name=stockmarket.name, stockmarket_id=stockmarket_id)
     return caption, kbds
 
 
@@ -142,6 +160,13 @@ async def choose_stockmarkets(session, level, menu_name, stockmarket_id):
 
     kbds = get_user_assets_stockmarkets_btns(level=level, assets_stockmarkets=assets_stockmarkets,
                                              stockmarket_id=stockmarket.id)
+    return caption, kbds
+
+
+async def confirm_delete_cryptomarket(session, level, cryptomarket_id):
+    cryptomarket = await orm_get_cryptomarket_by_id(session, cryptomarket_id)
+    caption = f"Вы уверены, что хотите удалить криптобиржу {cryptomarket.name}? Это действие необратимо."
+    kbds = get_confirm_delete_cryptomarket(level=level, cryptomarket_name=cryptomarket.name, cryptomarket_id=cryptomarket_id)
     return caption, kbds
 
 
@@ -506,6 +531,7 @@ async def get_menu_content(
         cryptomarket_id: int | None = None,
         stockmarket_id: int | None = None,
         page: int | None = None,
+        action: Optional[str] | None = None
 ):
     if level == 0:
         return await main_menu(session, level, menu_name, user_tg_id)
@@ -520,23 +546,36 @@ async def get_menu_content(
 
     orm_user_id = await orm_get_user(session, user_tg_id)
     orm_banks = await orm_get_bank(session, orm_user_id)
+
     for bank in orm_banks:
         if level == 3 and menu_name == bank.name:
             return await choose_banks(session, level, menu_name, bank_id)
 
+    if level == 3 and menu_name == "delete_bank":
+        return await confirm_delete_bank(session, level, bank_id)
+
+    if level == 3 and menu_name == "delete_stockmarket":
+        return await confirm_delete_stockmarket(session, level, stockmarket_id)
+
+    if level == 3 and menu_name == "delete_cryptomarket":
+        return await confirm_delete_cryptomarket(session, level, cryptomarket_id)
+
     orm_user_id = await orm_get_user(session, user_tg_id)
     orm_cryptomarkets = await orm_get_cryptomarket(session, orm_user_id)
+
     for cryptomarket in orm_cryptomarkets:
         if level == 3 and menu_name == cryptomarket.name:
             return await choose_cryptomarkets(session, level, menu_name, cryptomarket.id)
 
     orm_user_id = await orm_get_user(session, user_tg_id)
     orm_stockmarkets = await orm_get_stock_market(session, orm_user_id)
+
     for stockmarket in orm_stockmarkets:
         if level == 3 and menu_name == stockmarket.name:
             return await choose_stockmarkets(session, level, menu_name, stockmarket_id)
 
     bank = await orm_get_bank_by_id(session, bank_id)
+
     if level == 4:
         if menu_name in ["Вклады", "delete_deposit", "change_deposit"]:
             return await deposits(session, level, menu_name, bank_id, bank.name, page)
@@ -546,16 +585,19 @@ async def get_menu_content(
             return await currencies(session, level, menu_name, bank_id, bank.name, page)
 
     cryptomarket = await orm_get_cryptomarket_by_id(session, cryptomarket_id)
+
     if level == 4:
         if menu_name in ["Криптовалюты", "delete_cryptocurrency", "change_cryptocurrency"]:
             return await cryptocurrencies(session, level, menu_name, cryptomarket_id, cryptomarket.name, page)
 
     stockmarket = await orm_get_stock_market_by_id(session, stockmarket_id)
+
     if level == 4:
         if menu_name in ["Фонды", "delete_fund", "change_fund"]:
             return await funds(session, level, menu_name, stockmarket_id, stockmarket.name, page)
 
     stockmarket = await orm_get_stock_market_by_id(session, stockmarket_id)
+
     if level == 4:
         if menu_name in ["Акции", "delete_share", "change_share"]:
             return await shares(session, level, menu_name, stockmarket_id, stockmarket.name, page)
