@@ -105,7 +105,7 @@ async def back_handler(message: types.Message, state: FSMContext) -> None:
     current_state = await state.get_state()
 
     if current_state == AddShare.name:
-        await message.answer("Предыдущего шага нет, введите название валюты или нажмите ниже на кнопку отмены")
+        await message.answer("Предыдущего шага нет, введите название акции или нажмите ниже на кнопку отмены")
         return
 
     previous = None
