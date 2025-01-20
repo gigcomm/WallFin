@@ -1,10 +1,14 @@
 from aiogram.types import CallbackQuery
+from requests import session
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from database.orm_query import (orm_add_currency,
-                                orm_delete_currency,
-                                orm_get_currency,
-                                orm_update_currency)
+from database.orm_query import (
+    orm_add_currency,
+    orm_delete_currency,
+    orm_get_currency,
+    orm_update_currency,
+    check_existing_currency)
+
 from tg_bot.handlers.common_imports import *
 from parsers.parser_currency_rate import get_exchange_rate
 from tg_bot.keyboards.inline import get_callback_btns
@@ -123,7 +127,7 @@ async def back_handler(message: types.Message, state: FSMContext) -> None:
 
 
 @currency_router.message(AddCurrency.name, F.text)
-async def add_name(message: types.Message, state: FSMContext):
+async def add_name(message: types.Message, state: FSMContext, session: AsyncSession):
     if message.text == '.' and AddCurrency.currency_for_change:
         await state.update_data(name=AddCurrency.currency_for_change.name)
     else:
@@ -132,8 +136,26 @@ async def add_name(message: types.Message, state: FSMContext):
                 "Название валюты не должно превышать 150 символов. \n Введите заново"
             )
             return
-        await state.update_data(name=message.text.casefold())
-    await message.answer("Введите количество валюты на балансе")
+
+        try:
+            name = message.text.casefold()
+
+            if AddCurrency.currency_for_change and AddCurrency.currency_for_change.name == name:
+                await state.update_data(name=name)
+            else:
+                check_name = await check_existing_currency(session, name)
+                if check_name:
+                    raise ValueError(f"Валюта с именем '{name}' уже существует")
+
+                await state.update_data(name=name)
+
+        except ValueError as e:
+            await message.answer(f"Ошибка: {e}. Пожалуйста, введите другое название:")
+            return
+
+    data = await state.get_data()
+    currency_name = data['name']
+    await message.answer(f"Введите количество валюты {currency_name} на балансе")
     await state.set_state(AddCurrency.balance)
 
 
