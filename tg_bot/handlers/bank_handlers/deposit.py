@@ -3,9 +3,8 @@ from datetime import datetime
 from aiogram.types import CallbackQuery
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from database.orm_query import orm_delete_deposit, orm_add_deposit, orm_update_deposit, orm_get_deposit
+from database.orm_query import orm_add_deposit, orm_update_deposit, orm_get_deposit, check_existing_deposit
 from tg_bot.handlers.common_imports import *
-from tg_bot.keyboards.inline import get_callback_btns
 from tg_bot.keyboards.reply import get_keyboard
 
 deposit_router = Router()
@@ -117,7 +116,7 @@ async def back_handler(message: types.Message, state: FSMContext) -> None:
 
 
 @deposit_router.message(AddDeposit.name, F.text)
-async def add_name(message: types.Message, state: FSMContext):
+async def add_name(message: types.Message, state: FSMContext, session: AsyncSession):
     if message.text == '.' and AddDeposit.deposit_for_change:
         await state.update_data(name=AddDeposit.deposit_for_change.name)
     else:
@@ -126,8 +125,24 @@ async def add_name(message: types.Message, state: FSMContext):
                 "Название вклада не должно превышать 150 символов. \n Введите заново"
             )
             return
-        await state.update_data(name=message.text)
-    await message.answer("Введите дату начала вклада в формате ДД.ММ.ГГ.")
+
+        try:
+            name = message.text.casefold()
+
+            if AddDeposit.deposit_for_change and AddDeposit.deposit_for_change.name == name:
+                await state.update_data(name=name)
+            else:
+                check_name = await check_existing_deposit(session, name)
+                if check_name:
+                    raise ValueError(f"Вклад с именем '{name}' уже существует")
+
+                await state.update_data(name=name)
+
+        except ValueError as e:
+            await message.answer(f"Ошибка: {e}. Пожалуйста, введите другое название:")
+            return
+
+    await message.answer(f"Введите дату начала вклада в формате ДД.ММ.ГГ.")
     await state.set_state(AddDeposit.start_date)
 
 

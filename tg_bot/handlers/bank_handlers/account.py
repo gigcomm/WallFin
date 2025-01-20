@@ -1,7 +1,7 @@
 from aiogram.types import CallbackQuery
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from database.orm_query import orm_add_account, orm_delete_account, orm_update_account, orm_get_account
+from database.orm_query import orm_add_account, orm_update_account, orm_get_account, check_existing_account
 from tg_bot.handlers.common_imports import *
 from tg_bot.keyboards.inline import get_callback_btns
 from tg_bot.keyboards.reply import get_keyboard
@@ -110,7 +110,7 @@ async def back_handler(message: types.Message, state: FSMContext) -> None:
 
 
 @account_router.message(AddAccount.name, F.text)
-async def add_name(message: types.Message, state: FSMContext):
+async def add_name(message: types.Message, state: FSMContext, session: AsyncSession):
     if message.text == '.' and AddAccount.account_for_change:
         await state.update_data(name=AddAccount.account_for_change.name)
     else:
@@ -119,8 +119,25 @@ async def add_name(message: types.Message, state: FSMContext):
                 "Название счета не должно превышать 150 символов. \n Введите заново"
             )
             return
-        await state.update_data(name=message.text)
-    await message.answer("Введите количество денег на балансе")
+        try:
+            name = message.text.casefold()
+
+            if AddAccount.account_for_change and AddAccount.account_for_change.name == name:
+                await state.update_data(name=name)
+            else:
+                check_name = await check_existing_account(session, name)
+                if check_name:
+                    raise ValueError(f"Счет с именем '{name}' уже существует")
+
+                await state.update_data(name=name)
+
+        except ValueError as e:
+            await message.answer(f"Ошибка: {e}. Пожалуйста, введите другое название:")
+            return
+
+    data = await state.get_state()
+    account_name = data['name']
+    await message.answer(f"Введите количество денег на балансе счета {account_name}")
     await state.set_state(AddAccount.balance)
 
 
