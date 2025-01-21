@@ -138,7 +138,7 @@ async def add_name(message: types.Message, state: FSMContext, session: AsyncSess
             return
 
         try:
-            name = message.text.casefold()
+            name = message.text
 
             if AddCurrency.currency_for_change and AddCurrency.currency_for_change.name == name:
                 await state.update_data(name=name)
@@ -201,7 +201,7 @@ async def add_market_price(message: types.Message, state: FSMContext, session: A
             await orm_update_currency(session, data["currency_id"], data)
         else:
             await orm_add_currency(session, data)
-        await message.answer("Валюта добалена/изменена")
+        await message.answer("Валюта добалена/изменена", reply_markup=types.ReplyKeyboardRemove())
         await state.clear()
 
     except Exception as e:
