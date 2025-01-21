@@ -7,7 +7,7 @@ from database.orm_query import (
     orm_delete_bank,
     orm_get_bank,
     orm_update_bank,
-    orm_get_bank_by_id)
+    orm_get_bank_by_id, check_existing_bank)
 
 from tg_bot.handlers.common_imports import *
 from tg_bot.handlers.bank_handlers.account import account_router
@@ -127,14 +127,30 @@ async def add_name(message: types.Message, state: FSMContext, session: AsyncSess
                 "Название банка не должно превышать 150 символов. \n Введите заново"
             )
             return
-        await state.update_data(name=message.text)
+
+        try:
+            name = message.text
+
+            if AddBank.bank_for_change and AddBank.bank_for_change.name == name:
+                await state.update_data(name=name)
+            else:
+                check_name = await check_existing_bank(session, name)
+                if check_name:
+                    raise ValueError(f"Банк с именем '{name}' уже существует")
+
+                await state.update_data(name=name)
+
+        except ValueError as e:
+            await message.answer(f"Ошибка: {e}. Пожалуйста, введите другое название:")
+            return
+
     data = await state.get_data()
     try:
         if AddBank.bank_for_change:
             await orm_update_bank(session, AddBank.bank_for_change.id, data)
         else:
             await orm_add_bank(session, data, message)
-        await message.answer("Товар добавлен")
+        await message.answer("Товар добавлен", reply_markup=types.ReplyKeyboardRemove())
         await state.clear()
 
     except Exception as e:

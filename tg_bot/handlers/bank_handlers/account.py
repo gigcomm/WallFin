@@ -120,7 +120,7 @@ async def add_name(message: types.Message, state: FSMContext, session: AsyncSess
             )
             return
         try:
-            name = message.text.casefold()
+            name = message.text
 
             if AddAccount.account_for_change and AddAccount.account_for_change.name == name:
                 await state.update_data(name=name)
@@ -135,7 +135,7 @@ async def add_name(message: types.Message, state: FSMContext, session: AsyncSess
             await message.answer(f"Ошибка: {e}. Пожалуйста, введите другое название:")
             return
 
-    data = await state.get_state()
+    data = await state.get_data()
     account_name = data['name']
     await message.answer(f"Введите количество денег на балансе счета {account_name}")
     await state.set_state(AddAccount.balance)
@@ -159,7 +159,7 @@ async def add_balance(message: types.Message, state: FSMContext, session: AsyncS
             await orm_update_account(session, data["account_id"], data)
         else:
             await orm_add_account(session, data)
-        await message.answer("Счет добавлен")
+        await message.answer("Счет добавлен", reply_markup=types.ReplyKeyboardRemove())
         await state.clear()
 
     except Exception as e:

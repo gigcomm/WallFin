@@ -1,7 +1,7 @@
 from aiogram.types import CallbackQuery
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from database.orm_query import orm_add_share, orm_delete_share, orm_get_share, orm_update_share
+from database.orm_query import orm_add_share, orm_delete_share, orm_get_share, orm_update_share, check_existing_share
 from tg_bot.handlers.common_imports import *
 from tg_bot.keyboards.reply import get_keyboard
 from parsers.tinkoff_invest_API import get_price_share
@@ -118,7 +118,7 @@ async def back_handler(message: types.Message, state: FSMContext) -> None:
 
 
 @share_router.message(AddShare.name, F.text)
-async def add_name(message: types.Message, state: FSMContext):
+async def add_name(message: types.Message, state: FSMContext, session: AsyncSession):
     if message.text == '.' and AddShare.share_for_change:
         await state.update_data(name=AddShare.share_for_change.name)
     else:
@@ -127,7 +127,23 @@ async def add_name(message: types.Message, state: FSMContext):
                 "Название акции не должно превышать 150 символов. \n Введите заново"
             )
             return
-        await state.update_data(name=message.text.upper())
+
+        try:
+            name = message.text
+
+            if AddShare.share_for_change and AddShare.share_for_change.name == name:
+                await state.update_data(name=name.upper())
+            else:
+                check_name = await check_existing_share(session, name)
+                if check_name:
+                    raise ValueError(f"Акция с именем '{name}' уже существует")
+
+                await state.update_data(name=name.upper())
+
+        except ValueError as e:
+            await message.answer(f"Ошибка: {e}. Пожалуйста, введите другое название:")
+            return
+
     await message.answer("Введите цену покупки акции")
     await state.set_state(AddShare.purchase_price)
 
@@ -149,7 +165,7 @@ async def add_selling_price(message: types.Message, state: FSMContext):
     else:
         await state.update_data(selling_price=message.text)
     await message.answer(
-        "Введите цену акции на финбирже или напишите слово 'авто' для автоматического определения текущей цены акции")
+        "Введите цену акции на фондовой бирже или напишите слово 'авто' для автоматического определения текущей цены акции")
     await state.set_state(AddShare.market_price)
 
 
@@ -185,12 +201,13 @@ async def add_market_price(message: types.Message, state: FSMContext):
                     await message.answer("Введите валюту для акции (например, RUB, USD, EUR):")
                     await state.set_state(AddShare.currency)
                     return
+
             except ValueError:
                 await message.answer("Введите корректное числовое значение для цены акции")
                 return
 
-    await message.answer("Введите количество бумаг акции")
-    await state.set_state(AddShare.quantity)
+    await message.answer("Введите валюту для акции (например, RUB, USD, EUR):")
+    await state.set_state(AddShare.currency)
 
 
 @share_router.message(AddShare.currency, F.text)
@@ -199,7 +216,6 @@ async def add_currency(message: types.Message, state: FSMContext):
         await state.update_data(currency=AddShare.share_for_change.currency)
     else:
         currency = message.text.upper().strip()
-
 
         valid_currencies = ['RUB', 'USD', 'EUR']
         if currency not in valid_currencies:
@@ -227,11 +243,12 @@ async def add_quantity(message: types.Message, state: FSMContext, session: Async
             await orm_update_share(session, AddShare.share_for_change.id, data)
         else:
             await orm_add_share(session, data)
-        await message.answer("Бумага акции добавлена")
+        await message.answer("Бумага акции добавлена", reply_markup=types.ReplyKeyboardRemove())
         await state.clear()
 
     except Exception as e:
-        await message.answer(f"Ошибка {e}, обратитесь к @gigcomm, чтобы исправить ее!")
+        print(e)
+        await message.answer(f"Ошибка, обратитесь к @gigcomm, чтобы исправить ее!")
         await state.clear()
 
     AddShare.share_for_change = None

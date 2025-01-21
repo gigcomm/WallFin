@@ -127,7 +127,7 @@ async def add_name(message: types.Message, state: FSMContext, session: AsyncSess
             return
 
         try:
-            name = message.text.casefold()
+            name = message.text
 
             if AddDeposit.deposit_for_change and AddDeposit.deposit_for_change.name == name:
                 await state.update_data(name=name)
@@ -230,7 +230,7 @@ async def add_balance(message: types.Message, state: FSMContext, session: AsyncS
             await orm_update_deposit(session, int(data["deposit_id"]), data)
         else:
             await orm_add_deposit(session, data)
-        await message.answer("Вклад добавлен/изменен")
+        await message.answer("Вклад добавлен/изменен", reply_markup=types.ReplyKeyboardRemove())
         await state.clear()
 
     except Exception as e:

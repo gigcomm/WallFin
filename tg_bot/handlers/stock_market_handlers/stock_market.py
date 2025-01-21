@@ -6,7 +6,8 @@ from database.orm_query import (
     orm_delete_stock_market,
     orm_update_cryptomarket,
     orm_get_stock_market_by_id,
-    orm_update_stock_market)
+    orm_update_stock_market, check_existing_stock_market)
+from tg_bot.handlers.bank_handlers.currency import AddCurrency
 
 from tg_bot.handlers.common_imports import *
 from tg_bot.handlers.stock_market_handlers.fund import fund_router
@@ -19,7 +20,7 @@ stock_market_router.include_router(share_router)
 stock_market_router.include_router(fund_router)
 
 STOCKMARKET_CANCEL_FSM = get_keyboard(
-    "Отменить действие с финбиржей",
+    "Отменить действие с фодовой биржей",
     placeholder="Нажмите на кнопку ниже, чтобы отменить добавление/изменение",
 )
 
@@ -43,7 +44,7 @@ async def process_stockmarket_selection(callback_query: CallbackQuery):
     }
 
     await callback_query.message.edit_text(
-        text="Выберете действие, предоставляемое финбиржей:",
+        text="Выберете действие, предоставляемое фодовой биржей:",
         reply_markup=get_callback_btns(btns=buttons_stockmarket)
     )
     await callback_query.answer()
@@ -54,7 +55,7 @@ class AddStockMarket(StatesGroup):
 
     stock_market_for_change = None
     texts = {
-        'AddStockMarket:name': 'Введите новое название для финбиржи',
+        'AddStockMarket:name': 'Введите новое название для фодовой биржи',
     }
 
 
@@ -76,13 +77,13 @@ async def change_stock_market(callback_query: CallbackQuery, state: FSMContext, 
     AddStockMarket.stock_market_for_change = stock_market_for_change
 
     await callback_query.answer()
-    await callback_query.message.answer("Введите название финбиржи", reply_markup=STOCKMARKET_CANCEL_FSM)
+    await callback_query.message.answer("Введите название фодовой биржи", reply_markup=STOCKMARKET_CANCEL_FSM)
     await state.set_state(AddStockMarket.name)
 
 
 @stock_market_router.callback_query(StateFilter(None), F.data.startswith('add_stockmarket'))
 async def add_stock_market(callback_query: CallbackQuery, state: FSMContext):
-    await callback_query.message.answer("Введите название финбиржи", reply_markup=STOCKMARKET_CANCEL_FSM)
+    await callback_query.message.answer("Введите название фодовой биржи", reply_markup=STOCKMARKET_CANCEL_FSM)
     await state.set_state(AddStockMarket.name)
 
 
@@ -107,7 +108,22 @@ async def add_name(message: types.Message, state: FSMContext, session: AsyncSess
                 "Название финбиржи не должно превышать 150 символов. \n Введите заново"
             )
             return
-        await state.update_data(name=message.text)
+
+        try:
+            name = message.text
+
+            if AddStockMarket.stock_market_for_change and AddStockMarket.stock_market_for_change.name == name:
+                await state.update_data(name=name)
+            else:
+                check_name = await check_existing_stock_market(session, name)
+                if check_name:
+                    raise ValueError(f"Фондовая биржа с именем '{name}' уже существует")
+
+                await state.update_data(name=name)
+
+        except ValueError as e:
+            await message.answer(f"Ошибка: {e}. Пожалуйста, введите другое название:")
+            return
 
     data = await state.get_data()
     try:
@@ -115,11 +131,11 @@ async def add_name(message: types.Message, state: FSMContext, session: AsyncSess
             await orm_update_stock_market(session, AddStockMarket.stock_market_for_change.id, data)
         else:
             await orm_add_stock_market(session, data, message)
-        await message.answer("Финбиржа добавлена")
+        await message.answer("Фондовая биржа добавлена")
         await state.clear()
 
     except Exception as e:
-        await message.answer(f"Ошибка {e}, обратитесь к @gigcomm, чтобы исправить ее!")
+        await message.answer(f"Ошибка, обратитесь к @gigcomm, чтобы исправить ее!")
         await state.clear()
 
     AddStockMarket.stock_market_for_change = None
