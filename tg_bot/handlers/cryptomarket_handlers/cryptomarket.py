@@ -6,7 +6,7 @@ from database.orm_query import (
     orm_add_cryptomarket,
     orm_delete_cryptomarket,
     orm_update_cryptomarket,
-    orm_get_cryptomarket_by_id)
+    orm_get_cryptomarket_by_id, check_existing_cryptomarket)
 
 from tg_bot.handlers.common_imports import *
 from tg_bot.handlers.cryptomarket_handlers.cryptocurrency import cryptocurrency_router
@@ -105,7 +105,22 @@ async def add_balance(message: types.Message, state: FSMContext, session: AsyncS
                 "Название криптобиржи не должно превышать 150 символов. \n Введите заново"
             )
             return
-        await state.update_data(name=message.text)
+
+        try:
+            name = message.text
+
+            if AddCryptomarket.cryptomarket_for_change and AddCryptomarket.cryptomarket_for_change.name == name:
+                await state.update_data(name=name)
+            else:
+                check_name = await check_existing_cryptomarket(session, name)
+                if check_name:
+                    raise ValueError(f"Криптобиржа с именем '{name}' уже существует")
+
+                await state.update_data(name=name)
+
+        except ValueError as e:
+            await message.answer(f"Ошибка: {e}. Пожалуйста, введите другое название:")
+            return
 
     data = await state.get_data()
     try:
@@ -113,11 +128,11 @@ async def add_balance(message: types.Message, state: FSMContext, session: AsyncS
             await orm_update_cryptomarket(session, AddCryptomarket.cryptomarket_for_change.id, data)
         else:
             await orm_add_cryptomarket(session, data, message)
-        await message.answer("Криптобиржа добавлена")
+        await message.answer("Криптобиржа добавлена", reply_markup=types.ReplyKeyboardRemove())
         await state.clear()
 
     except Exception as e:
-        await message.answer(f"Ошибка {e}, обратитесь к @gigcomm, чтобы исправить ее!")
+        await message.answer(f"Ошибка, обратитесь к @gigcomm, чтобы исправить ее!")
         await state.clear()
 
     AddCryptomarket.cryptomarket_for_change = None

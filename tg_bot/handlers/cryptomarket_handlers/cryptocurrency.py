@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from database.orm_query import (
     orm_add_cryptocurrency,
     orm_get_cryptocurrency_by_cryptomarket_id,
-    orm_update_cryptocurrency)
+    orm_update_cryptocurrency, check_existing_cryptocurrency, orm_get_cryptocurrency)
 
 from tg_bot.handlers.common_imports import *
 from parsers.Bybit_API import get_price_cryptocurrency
@@ -45,8 +45,8 @@ class AddСryptocurrency(StatesGroup):
 @cryptocurrency_router.callback_query(StateFilter(None), F.data.startswith("change_cryptocurrency"))
 async def change_cryptocurrency(callback_query: CallbackQuery, state: FSMContext, session: AsyncSession):
     cryptocurrency_id = int(callback_query.data.split(":")[-1])
-    cryptocurrency_for_change = await orm_get_cryptocurrency_by_cryptomarket_id(session, cryptocurrency_id)
     await state.update_data(cryptocurrency_id=cryptocurrency_id)
+    cryptocurrency_for_change = await orm_get_cryptocurrency(session, cryptocurrency_id)
     AddСryptocurrency.cryptocurrency_for_change = cryptocurrency_for_change
 
     await callback_query.answer()
@@ -94,7 +94,7 @@ async def back_handler(message: types.Message, state: FSMContext) -> None:
 
 
 @cryptocurrency_router.message(AddСryptocurrency.name, F.text)
-async def add_name(message: types.Message, state: FSMContext):
+async def add_name(message: types.Message, state: FSMContext, session: AsyncSession):
     if message.text == '.' and AddСryptocurrency.cryptocurrency_for_change:
         await state.update_data(name=AddСryptocurrency.cryptocurrency_for_change.name)
     else:
@@ -103,7 +103,23 @@ async def add_name(message: types.Message, state: FSMContext):
                 "Название криптовалюты не должно превышать 5 символов. \n Введите заново"
             )
             return
-        await state.update_data(name=message.text.upper())
+
+        try:
+            name = message.text
+
+            if AddСryptocurrency.cryptocurrency_for_change and AddСryptocurrency.cryptocurrency_for_change.name == name:
+                await state.update_data(name=name.upper())
+            else:
+                check_name = await check_existing_cryptocurrency(session, name)
+                if check_name:
+                    raise ValueError(f"Криптовалюта с именем '{name}' уже существует")
+
+                await state.update_data(name=name.upper())
+
+        except ValueError as e:
+            await message.answer(f"Ошибка: {e}. Пожалуйста, введите другое название:")
+            return
+
     await message.answer("Введите количество криптовалюты")
     await state.set_state(AddСryptocurrency.balance)
 
@@ -181,10 +197,11 @@ async def add_market_price(message: types.Message, state: FSMContext, session: A
             await orm_update_cryptocurrency(session, data["cryptocurrency_id"], data)
         else:
             await orm_add_cryptocurrency(session, data)
-        await message.answer(f"Криптовалюта {cryptocur_name} добавлена")
+        await message.answer(f"Криптовалюта {cryptocur_name} добавлена", reply_markup=types.ReplyKeyboardRemove())
         await state.clear()
 
     except Exception as e:
+        print(e)
         await message.answer(f"Ошибка {e}, обратитесь к @gigcomm, чтобы исправить ее!")
         await state.clear()
 
