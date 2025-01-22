@@ -1,7 +1,7 @@
 from aiogram.types import CallbackQuery
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from database.orm_query import orm_add_fund, orm_get_fund, orm_update_fund
+from database.orm_query import orm_add_fund, orm_get_fund, orm_update_fund, check_existing_fund
 from tg_bot.handlers.common_imports import *
 from tg_bot.keyboards.reply import get_keyboard
 from parsers.tinkoff_invest_API import get_price_fund
@@ -49,7 +49,7 @@ class AddFund(StatesGroup):
         'AddFund:purchase_price': 'Введите цена покупки заново',
         'AddFund:selling_price': 'Введите цену продажи заново',
         'AddFund:market_price': 'Введите цену на бирже заново',
-        'AddFund: currency': 'Введите наименование валюты для акции(например, RUB, USD, EUR):',
+        'AddFund:currency': 'Введите наименование валюты для акции(например, RUB, USD, EUR):',
         'AddFund:quantity': 'Это последний стейт...',
     }
 
@@ -68,8 +68,6 @@ async def change_fund(callback_query: types.CallbackQuery, state: FSMContext, se
     fund_id = int(callback_query.data.split(":")[-1])
     await state.update_data(fund_id=fund_id)
     fund_for_change = await orm_get_fund(session, fund_id)
-    AddFund.fund_for_change = None
-
     AddFund.fund_for_change = fund_for_change
 
     await callback_query.answer()
@@ -116,7 +114,7 @@ async def back_handler(message: types.Message, state: FSMContext) -> None:
 
 
 @fund_router.message(AddFund.name, F.text)
-async def add_name(message: types.Message, state: FSMContext):
+async def add_name(message: types.Message, state: FSMContext, session: AsyncSession):
     if message.text == '.' and AddFund.fund_for_change:
         await state.update_data(name=AddFund.fund_for_change.name)
     else:
@@ -125,7 +123,23 @@ async def add_name(message: types.Message, state: FSMContext):
                 "Название фонда не должно превышать 150 символов. \n Введите заново"
             )
             return
-        await state.update_data(name=message.text.upper())
+
+        try:
+            name = message.text
+
+            if AddFund.fund_for_change and AddFund.fund_for_change.name == name:
+                await state.update_data(name=name.upper())
+            else:
+                check_name = await check_existing_fund(session, name)
+                if check_name:
+                    raise ValueError(f"Фонд с именем '{name}' уже существует")
+
+                await state.update_data(name=name.upper())
+
+        except ValueError as e:
+            await message.answer(f"Ошибка: {e}. Пожалуйста, введите другое название:")
+            return
+
     await message.answer("Введите цену покупки фонда")
     await state.set_state(AddFund.purchase_price)
 
@@ -147,14 +161,14 @@ async def add_selling_price(message: types.Message, state: FSMContext):
     else:
         await state.update_data(selling_price=message.text)
     await message.answer(
-        "Введите цену фонда на финбирже или введите слово 'авто' для автоматического определения текущей цены фонда")
+        "Введите цену фонда на фондовой бирже или введите слово 'авто' для автоматического определения текущей цены фонда")
     await state.set_state(AddFund.market_price)
 
 
 @fund_router.message(AddFund.market_price, F.text)
 async def add_market_price(message: types.Message, state: FSMContext):
     data = await state.get_data()
-    name_fund = data['name']
+    fund_name = data['name']
 
     if message.text == '.' and AddFund.fund_for_change:
         await state.update_data(market_price=AddFund.fund_for_change.market_price)
@@ -162,13 +176,13 @@ async def add_market_price(message: types.Message, state: FSMContext):
         market_price = message.text
         if market_price.casefold() == 'авто':
             try:
-                auto_market_price, currency = await get_price_fund(name_fund)
+                auto_market_price, currency = await get_price_fund(fund_name)
                 if auto_market_price is None:
                     await message.answer("Введите корректное числовое значение для цены фонда")
                     return
 
                 await state.update_data(market_price=auto_market_price, currency=currency)
-                await message.answer(f"Курс {name_fund} на финбирже автоматически установлен: {auto_market_price}")
+                await message.answer(f"Курс {fund_name} на финбирже автоматически установлен: {auto_market_price}")
             except Exception as e:
                 await message.answer(f"Не удалось получить цену фонда: {e}")
                 return
@@ -186,8 +200,8 @@ async def add_market_price(message: types.Message, state: FSMContext):
                 await message.answer("Введите корректное числовое значение для цены фонда")
                 return
 
-        await message.answer("Введите количество купленных бумаг фонда")
-        await state.set_state(AddFund.quantity)
+    await message.answer("Введите валюту для фонда (например, RUB, USD, EUR):")
+    await state.set_state(AddFund.currency)
 
 
 @fund_router.message(AddFund.currency, F.text)
@@ -223,11 +237,11 @@ async def add_quantity(message: types.Message, state: FSMContext, session: Async
             await orm_update_fund(session, AddFund.fund_for_change.id, data)
         else:
             await orm_add_fund(session, data)
-        await message.answer("Бумага фонда добавлены")
+        await message.answer("Бумага фонда добавлены", reply_markup=types.ReplyKeyboardRemove())
         await state.clear()
 
     except Exception as e:
-        await message.answer(f"Ошибка {e}, обратитесь к @gigcomm, чтобы исправить ее!")
+        await message.answer(f"Ошибка, обратитесь к @gigcomm, чтобы исправить ее!")
         await state.clear()
 
     AddFund.fund_for_change = None
