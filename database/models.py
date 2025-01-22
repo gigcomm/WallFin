@@ -157,7 +157,7 @@ class Cryptocurrency(Base):
     balance: Mapped[float] = mapped_column(DECIMAL(20, 8), nullable=False, default=0.0)
     purchase_price: Mapped[float] = mapped_column(Float, nullable=False)
     selling_price: Mapped[float] = mapped_column(Float, nullable=False)
-    market_price: Mapped[float] = mapped_column(DECIMAL(10, 8), nullable=False)
+    market_price: Mapped[float] = mapped_column(DECIMAL(10, 2), nullable=False)
     cryptomarket_id: Mapped[int] = mapped_column(ForeignKey("cryptomarket.id", ondelete="CASCADE"), nullable=False)
 
     cryptomarket: Mapped["CryptoMarket"] = relationship(back_populates="cryptocurrency")
