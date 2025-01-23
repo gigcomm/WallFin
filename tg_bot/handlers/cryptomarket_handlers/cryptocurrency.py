@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from database.orm_query import (
     orm_add_cryptocurrency,
     orm_get_cryptocurrency_by_cryptomarket_id,
-    orm_update_cryptocurrency, check_existing_cryptocurrency, orm_get_cryptocurrency)
+    orm_update_cryptocurrency, check_existing_cryptocurrency, orm_get_cryptocurrency, orm_get_user)
 
 from tg_bot.handlers.common_imports import *
 from parsers.Bybit_API import get_price_cryptocurrency
@@ -95,6 +95,9 @@ async def back_handler(message: types.Message, state: FSMContext) -> None:
 
 @cryptocurrency_router.message(AddСryptocurrency.name, F.text)
 async def add_name(message: types.Message, state: FSMContext, session: AsyncSession):
+    user_tg_id = message.from_user.id
+    user_id = await orm_get_user(session, user_tg_id)
+
     if message.text == '.' and AddСryptocurrency.cryptocurrency_for_change:
         await state.update_data(name=AddСryptocurrency.cryptocurrency_for_change.name)
     else:
@@ -110,7 +113,7 @@ async def add_name(message: types.Message, state: FSMContext, session: AsyncSess
             if AddСryptocurrency.cryptocurrency_for_change and AddСryptocurrency.cryptocurrency_for_change.name == name:
                 await state.update_data(name=name.upper())
             else:
-                check_name = await check_existing_cryptocurrency(session, name)
+                check_name = await check_existing_cryptocurrency(session, name, user_id)
                 if check_name:
                     raise ValueError(f"Криптовалюта с именем '{name}' уже существует")
 

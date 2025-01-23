@@ -3,7 +3,8 @@ from datetime import datetime
 from aiogram.types import CallbackQuery
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from database.orm_query import orm_add_deposit, orm_update_deposit, orm_get_deposit, check_existing_deposit
+from database.orm_query import orm_add_deposit, orm_update_deposit, orm_get_deposit, check_existing_deposit, \
+    orm_get_user
 from tg_bot.handlers.common_imports import *
 from tg_bot.keyboards.reply import get_keyboard
 
@@ -117,6 +118,9 @@ async def back_handler(message: types.Message, state: FSMContext) -> None:
 
 @deposit_router.message(AddDeposit.name, F.text)
 async def add_name(message: types.Message, state: FSMContext, session: AsyncSession):
+    user_tg_id = message.from_user.id
+    user_id = await orm_get_user(session, user_tg_id)
+
     if message.text == '.' and AddDeposit.deposit_for_change:
         await state.update_data(name=AddDeposit.deposit_for_change.name)
     else:
@@ -132,7 +136,7 @@ async def add_name(message: types.Message, state: FSMContext, session: AsyncSess
             if AddDeposit.deposit_for_change and AddDeposit.deposit_for_change.name == name:
                 await state.update_data(name=name)
             else:
-                check_name = await check_existing_deposit(session, name)
+                check_name = await check_existing_deposit(session, name, user_id)
                 if check_name:
                     raise ValueError(f"Вклад с именем '{name}' уже существует")
 

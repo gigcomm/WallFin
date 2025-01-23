@@ -7,7 +7,7 @@ from database.orm_query import (
     orm_delete_currency,
     orm_get_currency,
     orm_update_currency,
-    check_existing_currency)
+    check_existing_currency, orm_get_user)
 
 from tg_bot.handlers.common_imports import *
 from parsers.parser_currency_rate import get_exchange_rate
@@ -128,6 +128,9 @@ async def back_handler(message: types.Message, state: FSMContext) -> None:
 
 @currency_router.message(AddCurrency.name, F.text)
 async def add_name(message: types.Message, state: FSMContext, session: AsyncSession):
+    user_tg_id = message.from_user.id
+    user_id = await orm_get_user(session, user_tg_id)
+
     if message.text == '.' and AddCurrency.currency_for_change:
         await state.update_data(name=AddCurrency.currency_for_change.name)
     else:
@@ -143,7 +146,7 @@ async def add_name(message: types.Message, state: FSMContext, session: AsyncSess
             if AddCurrency.currency_for_change and AddCurrency.currency_for_change.name == name:
                 await state.update_data(name=name)
             else:
-                check_name = await check_existing_currency(session, name)
+                check_name = await check_existing_currency(session, name, user_id)
                 if check_name:
                     raise ValueError(f"Валюта с именем '{name}' уже существует")
 

@@ -6,7 +6,7 @@ from database.orm_query import (
     orm_delete_stock_market,
     orm_update_cryptomarket,
     orm_get_stock_market_by_id,
-    orm_update_stock_market, check_existing_stock_market)
+    orm_update_stock_market, check_existing_stock_market, orm_get_user)
 from tg_bot.handlers.bank_handlers.currency import AddCurrency
 
 from tg_bot.handlers.common_imports import *
@@ -100,6 +100,9 @@ async def cancel_handler(message: types.Message, state: FSMContext) -> None:
 
 @stock_market_router.message(AddStockMarket.name, or_f(F.text))
 async def add_name(message: types.Message, state: FSMContext, session: AsyncSession):
+    user_tg_id = message.from_user.id
+    user_id = await orm_get_user(session, user_tg_id)
+
     if message.text == '.' and AddStockMarket.stock_market_for_change:
         await state.update_data(name=AddStockMarket.stock_market_for_change.name)
     else:
@@ -115,7 +118,7 @@ async def add_name(message: types.Message, state: FSMContext, session: AsyncSess
             if AddStockMarket.stock_market_for_change and AddStockMarket.stock_market_for_change.name == name:
                 await state.update_data(name=name)
             else:
-                check_name = await check_existing_stock_market(session, name)
+                check_name = await check_existing_stock_market(session, name, user_id)
                 if check_name:
                     raise ValueError(f"Фондовая биржа с именем '{name}' уже существует")
 
