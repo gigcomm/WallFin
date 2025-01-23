@@ -13,9 +13,16 @@ from database.orm_query import (
     orm_get_cryptomarket_by_id,
     orm_delete_deposit,
     orm_get_deposit_by_bank_id,
-    orm_get_account_by_bank_id, orm_delete_account, orm_get_currency_by_bank_id,
-    orm_get_cryptocurrency_by_cryptomarket_id, orm_delete_cryptocurrency, orm_get_fund_by_stockmarket_id,
-    orm_delete_fund, orm_get_share_by_stockmarket_id, orm_delete_share, orm_get_share, orm_get_stock_market_by_id)
+    orm_get_account_by_bank_id,
+    orm_delete_account,
+    orm_get_currency_by_bank_id,
+    orm_get_cryptocurrency_by_cryptomarket_id,
+    orm_delete_cryptocurrency,
+    orm_get_fund_by_stockmarket_id,
+    orm_delete_fund,
+    orm_get_share_by_stockmarket_id,
+    orm_delete_share,
+    orm_get_stock_market_by_id)
 
 from tg_bot.keyboards.inline import (
     get_user_main_btns,
@@ -27,8 +34,14 @@ from tg_bot.keyboards.inline import (
     get_user_assets_cryptomarkets_btns,
     get_user_assets_stockmarkets_btns,
     get_deposit_btns,
-    get_account_btns, get_currency_btns, get_cryptocurrencies_btns, get_shares_btns, get_funds_btns,
-    get_confirm_delete_bank, get_confirm_delete_stockmarket, get_confirm_delete_cryptomarket)
+    get_account_btns,
+    get_currency_btns,
+    get_cryptocurrencies_btns,
+    get_shares_btns,
+    get_funds_btns,
+    get_confirm_delete_bank,
+    get_confirm_delete_stockmarket,
+    get_confirm_delete_cryptomarket)
 
 from utils.paginator import Paginator
 
