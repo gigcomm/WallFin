@@ -111,6 +111,8 @@ async def back_handler(message: types.Message, state: FSMContext) -> None:
 
 @account_router.message(AddAccount.name, F.text)
 async def add_name(message: types.Message, state: FSMContext, session: AsyncSession):
+    user_id = message.from_user.id
+
     if message.text == '.' and AddAccount.account_for_change:
         await state.update_data(name=AddAccount.account_for_change.name)
     else:
@@ -125,7 +127,7 @@ async def add_name(message: types.Message, state: FSMContext, session: AsyncSess
             if AddAccount.account_for_change and AddAccount.account_for_change.name == name:
                 await state.update_data(name=name)
             else:
-                check_name = await check_existing_account(session, name)
+                check_name = await check_existing_account(session, name, user_id)
                 if check_name:
                     raise ValueError(f"Счет с именем '{name}' уже существует")
 

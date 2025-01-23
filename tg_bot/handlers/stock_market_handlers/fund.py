@@ -1,7 +1,7 @@
 from aiogram.types import CallbackQuery
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from database.orm_query import orm_add_fund, orm_get_fund, orm_update_fund, check_existing_fund
+from database.orm_query import orm_add_fund, orm_get_fund, orm_update_fund, check_existing_fund, orm_get_user
 from tg_bot.handlers.common_imports import *
 from tg_bot.keyboards.reply import get_keyboard
 from parsers.tinkoff_invest_API import get_price_fund
@@ -115,6 +115,9 @@ async def back_handler(message: types.Message, state: FSMContext) -> None:
 
 @fund_router.message(AddFund.name, F.text)
 async def add_name(message: types.Message, state: FSMContext, session: AsyncSession):
+    user_tg_id = message.from_user.id
+    user_id = await orm_get_user(session, user_tg_id)
+
     if message.text == '.' and AddFund.fund_for_change:
         await state.update_data(name=AddFund.fund_for_change.name)
     else:
@@ -130,7 +133,7 @@ async def add_name(message: types.Message, state: FSMContext, session: AsyncSess
             if AddFund.fund_for_change and AddFund.fund_for_change.name == name:
                 await state.update_data(name=name.upper())
             else:
-                check_name = await check_existing_fund(session, name)
+                check_name = await check_existing_fund(session, name, user_id)
                 if check_name:
                     raise ValueError(f"Фонд с именем '{name}' уже существует")
 

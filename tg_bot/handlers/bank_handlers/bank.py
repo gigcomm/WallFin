@@ -7,7 +7,7 @@ from database.orm_query import (
     orm_delete_bank,
     orm_get_bank,
     orm_update_bank,
-    orm_get_bank_by_id, check_existing_bank)
+    orm_get_bank_by_id, check_existing_bank, orm_get_user)
 
 from tg_bot.handlers.common_imports import *
 from tg_bot.handlers.bank_handlers.account import account_router
@@ -119,6 +119,9 @@ async def cancel_handler(message: types.Message, state: FSMContext) -> None:
 
 @bank_router.message(AddBank.name, or_f(F.text))
 async def add_name(message: types.Message, state: FSMContext, session: AsyncSession):
+    user_tg_id = message.from_user.id
+    user_id = await orm_get_user(session, user_tg_id)
+
     if message.text == '.' and AddBank.bank_for_change:
         await state.update_data(name=AddBank.bank_for_change.name)
     else:
@@ -134,7 +137,7 @@ async def add_name(message: types.Message, state: FSMContext, session: AsyncSess
             if AddBank.bank_for_change and AddBank.bank_for_change.name == name:
                 await state.update_data(name=name)
             else:
-                check_name = await check_existing_bank(session, name)
+                check_name = await check_existing_bank(session, name, user_id)
                 if check_name:
                     raise ValueError(f"Банк с именем '{name}' уже существует")
 

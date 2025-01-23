@@ -6,7 +6,7 @@ from database.orm_query import (
     orm_add_cryptomarket,
     orm_delete_cryptomarket,
     orm_update_cryptomarket,
-    orm_get_cryptomarket_by_id, check_existing_cryptomarket)
+    orm_get_cryptomarket_by_id, check_existing_cryptomarket, orm_get_user)
 
 from tg_bot.handlers.common_imports import *
 from tg_bot.handlers.cryptomarket_handlers.cryptocurrency import cryptocurrency_router
@@ -97,6 +97,9 @@ async def cancel_handler(message: types.Message, state: FSMContext) -> None:
 
 @cryptomarket_router.message(AddCryptomarket.name, or_f(F.text))
 async def add_balance(message: types.Message, state: FSMContext, session: AsyncSession):
+    user_tg_id = message.from_user.id
+    user_id = await orm_get_user(session, user_tg_id)
+
     if message.text == '.' and AddCryptomarket.cryptomarket_for_change:
         await state.update_data(name=AddCryptomarket.cryptomarket_for_change.name)
     else:
@@ -112,7 +115,7 @@ async def add_balance(message: types.Message, state: FSMContext, session: AsyncS
             if AddCryptomarket.cryptomarket_for_change and AddCryptomarket.cryptomarket_for_change.name == name:
                 await state.update_data(name=name)
             else:
-                check_name = await check_existing_cryptomarket(session, name)
+                check_name = await check_existing_cryptomarket(session, name, user_id)
                 if check_name:
                     raise ValueError(f"Криптобиржа с именем '{name}' уже существует")
 
