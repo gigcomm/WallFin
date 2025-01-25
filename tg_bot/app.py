@@ -1,12 +1,7 @@
 import asyncio
-import os
 
-from aiogram import Bot, Dispatcher, types
-from aiogram.client.default import DefaultBotProperties
-from aiogram.enums import ParseMode
-
-from dotenv import find_dotenv, load_dotenv
-load_dotenv(find_dotenv())
+from aiogram import types
+from tg_bot.core import bot, dp
 
 from middlewares.db import DataBaseSession
 
@@ -19,11 +14,6 @@ from tg_bot.handlers.bank_handlers.bank import bank_router
 from tg_bot.handlers.cryptomarket_handlers.cryptomarket import cryptomarket_router
 from tg_bot.handlers.stock_market_handlers.stock_market import stock_market_router
 
-
-
-bot = Bot(token=os.getenv('TOKEN'), default=DefaultBotProperties(parse_mode= ParseMode.HTML))
-
-dp = Dispatcher()
 
 dp.include_router(user_private_router)
 dp.include_router(admin_router)
