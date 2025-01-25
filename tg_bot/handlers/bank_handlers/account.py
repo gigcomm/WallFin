@@ -1,10 +1,11 @@
 from aiogram.types import CallbackQuery
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from database.orm_query import orm_add_account, orm_update_account, orm_get_account, check_existing_account
+from database.orm_query import orm_add_account, orm_update_account, orm_get_account, check_existing_account, \
+    orm_get_user
 from tg_bot.handlers.common_imports import *
-from tg_bot.keyboards.inline import get_callback_btns
 from tg_bot.keyboards.reply import get_keyboard
+from utils.message_utils import delete_regular_messages, delete_bot_and_user_messages
 
 account_router = Router()
 
@@ -62,64 +63,89 @@ async def change_account(callback_query: CallbackQuery, state: FSMContext, sessi
     account_id = int(callback_query.data.split(":")[-1])
     await state.update_data(account_id=account_id)
     account_for_change = await orm_get_account(session, account_id)
+
     AddAccount.account_for_change = account_for_change
 
-    await callback_query.answer()
-    await callback_query.message.answer("В режиме изменения, если поставить точку, данное поле будет прежним,"
-                                        " а процесс перейдет к следующему полю объекта. \n Введите название счета",
-                                        reply_markup=ACCOUNT_CANCEL_AND_BACK_FSM)
+    keyboard_message = await callback_query.message.answer(
+        "В режиме изменения, если поставить точку, данное поле будет прежним,"
+        "а процесс перейдет к следующему полю объекта.\nИзмените данные:",
+        reply_markup=ACCOUNT_CANCEL_AND_BACK_FSM)
+    bot_message = await callback_query.message.answer("Введите название счета")
+
+    await state.update_data(keyboard_message_id=[keyboard_message.message_id], message_ids=[bot_message.message_id])
+
     await state.set_state(AddAccount.name)
 
 
 @account_router.callback_query(StateFilter(None), F.data.startswith('add_account'))
 async def add_account(callback_query: CallbackQuery, state: FSMContext):
     bank_id = int(callback_query.data.split(':')[-1])
-    await state.update_data(bank_id=bank_id)
-    await callback_query.message.answer("Введите название счета", reply_markup=ACCOUNT_CANCEL_FSM)
+    await state.update_data(bank_id=bank_id, message_ids=[], keyboard_message_id=[])
+
+    keyboard_message = await callback_query.message.answer("Заполните данные:", reply_markup=ACCOUNT_CANCEL_FSM)
+    bot_message = await callback_query.message.answer("Введите название счета")
+    await state.update_data(keyboard_message_id=[keyboard_message.message_id], message_ids=[bot_message.message_id])
+
     await state.set_state(AddAccount.name)
 
 
 @account_router.message(StateFilter('*'), Command('Отменить действие со счетом'))
 @account_router.message(StateFilter('*'), F.text.casefold() == 'отменить действие со счетом')
 async def cancel_handler(message: types.Message, state: FSMContext) -> None:
+    data = await state.get_data()
+    await delete_regular_messages(data, message)
+
     current_state = await state.get_state()
     if current_state is None:
         return
     if AddAccount.account_for_change:
         AddAccount.account_for_change = None
     await state.clear()
-    await message.answer("Действия отменены", reply_markup=types.ReplyKeyboardRemove())
+
+    bot_message = await message.answer("Действия отменены", reply_markup=types.ReplyKeyboardRemove())
+    await state.update_data(message_ids=[message.message_id, bot_message.message_id])
+
+    await delete_bot_and_user_messages(data, message, bot_message)
 
 
 @account_router.message(StateFilter('*'), Command('Назад к предыдущему шагу'))
 @account_router.message(StateFilter('*'), F.text.casefold() == "назад к предыдущему шагу")
 async def back_handler(message: types.Message, state: FSMContext) -> None:
+    data = await state.get_data()
+
+    await delete_regular_messages(data, message)
     current_state = await state.get_state()
 
     if current_state == AddAccount.name:
-        await message.answer("Предыдущего шага нет, введите название счета или нажмите ниже на кнопку отмены")
+        bot_message = await message.answer(
+            "Предыдущего шага нет, введите название счета или нажмите ниже на кнопку отмены")
+        await state.update_data(message_ids=[message.message_id, bot_message.message_id])
         return
 
     previous = None
     for step in AddAccount.__all_states__:
         if step.state == current_state:
             await state.set_state(previous)
-            await message.answer(f"Вы вернулись к прошлому шагу \n {AddAccount.texts[previous.state]}")
+            bot_message = await message.answer(f"Вы вернулись к прошлому шагу \n {AddAccount.texts[previous.state]}")
+            await state.update_data(message_ids=[message.message_id, bot_message.message_id])
             return
         previous = step
 
 
 @account_router.message(AddAccount.name, F.text)
 async def add_name(message: types.Message, state: FSMContext, session: AsyncSession):
-    user_id = message.from_user.id
+    user_tg_id = message.from_user.id
+    user_id = await orm_get_user(session, user_tg_id)
+
+    data = await state.get_data()
+    await delete_regular_messages(data, message)
 
     if message.text == '.' and AddAccount.account_for_change:
         await state.update_data(name=AddAccount.account_for_change.name)
     else:
-        if len(message.text) >= 150:
-            await message.answer(
-                "Название счета не должно превышать 150 символов. \n Введите заново"
-            )
+        if len(message.text) >= 50:
+            bot_message = await message.answer("Название счета не должно превышать 50 символов. \n Введите заново")
+            await state.update_data(message_ids=[message.message_id, bot_message.message_id])
             return
         try:
             name = message.text
@@ -134,17 +160,22 @@ async def add_name(message: types.Message, state: FSMContext, session: AsyncSess
                 await state.update_data(name=name)
 
         except ValueError as e:
-            await message.answer(f"Ошибка: {e}. Пожалуйста, введите другое название:")
+            bot_message = await message.answer(f"Ошибка: {e}. Пожалуйста, введите другое название:")
+            await state.update_data(message_ids=[bot_message.message_id])
             return
 
     data = await state.get_data()
     account_name = data['name']
-    await message.answer(f"Введите количество денег на балансе счета {account_name}")
+    bot_message = await message.answer(f"Введите количество денег на балансе счета {account_name}")
+    await state.update_data(message_ids=[message.message_id, bot_message.message_id])
     await state.set_state(AddAccount.balance)
 
 
 @account_router.message(AddAccount.balance, F.text)
 async def add_balance(message: types.Message, state: FSMContext, session: AsyncSession):
+    data = await state.get_data()
+    await delete_regular_messages(data, message)
+
     if message.text == '.' and AddAccount.account_for_change:
         await state.update_data(balance=AddAccount.account_for_change.balance)
     else:
@@ -152,7 +183,8 @@ async def add_balance(message: types.Message, state: FSMContext, session: AsyncS
             balance = float(message.text)
             await state.update_data(balance=balance)
         except ValueError:
-            await message.answer("Некорректное значение баланса, введите число.")
+            bot_message = await message.answer("Некорректное значение баланса, введите число.")
+            await state.update_data(message_ids=[message.message_id, bot_message.message_id])
             return
 
     data = await state.get_data()
@@ -161,11 +193,16 @@ async def add_balance(message: types.Message, state: FSMContext, session: AsyncS
             await orm_update_account(session, data["account_id"], data)
         else:
             await orm_add_account(session, data)
-        await message.answer("Счет добавлен", reply_markup=types.ReplyKeyboardRemove())
+
+        bot_message = await message.answer("Счет добавлен", reply_markup=types.ReplyKeyboardRemove())
+        await state.update_data(message_ids=[message.message_id, bot_message.message_id])
         await state.clear()
 
+        await delete_bot_and_user_messages(data, message, bot_message)
+
     except Exception as e:
-        await message.answer(f"Ошибка {e}, обратитесь к @gigcomm, чтобы исправить ее!")
+        print(f"Ошибка {e}")
+        await message.answer(f"Ошибка, обратитесь к @gigcomm, чтобы исправить ее!")
         await state.clear()
 
     AddAccount.account_for_change = None

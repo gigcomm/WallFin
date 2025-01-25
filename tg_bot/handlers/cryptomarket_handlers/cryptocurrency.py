@@ -101,9 +101,9 @@ async def add_name(message: types.Message, state: FSMContext, session: AsyncSess
     if message.text == '.' and AddСryptocurrency.cryptocurrency_for_change:
         await state.update_data(name=AddСryptocurrency.cryptocurrency_for_change.name)
     else:
-        if len(message.text) >= 5:
+        if len(message.text) >= 10:
             await message.answer(
-                "Название криптовалюты не должно превышать 5 символов. \n Введите заново"
+                "Название криптовалюты не должно превышать 10 символов. \n Введите заново"
             )
             return
 
