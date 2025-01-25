@@ -1,10 +1,8 @@
-from aiogram.filters.callback_data import CallbackData
 from aiogram.types import CallbackQuery
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database.orm_query import (
     orm_add_bank,
-    orm_delete_bank,
     orm_get_bank,
     orm_update_bank,
     orm_get_bank_by_id, check_existing_bank, orm_get_user)
@@ -13,9 +11,9 @@ from tg_bot.handlers.common_imports import *
 from tg_bot.handlers.bank_handlers.account import account_router
 from tg_bot.handlers.bank_handlers.currency import currency_router
 from tg_bot.handlers.bank_handlers.deposit import deposit_router
-from tg_bot.keyboards.delete_confirmation_keyboard import get_delete_confirmation_keyboard
-from tg_bot.keyboards.inline import get_callback_btns, MenuCallBack
+from tg_bot.keyboards.inline import get_callback_btns
 from tg_bot.keyboards.reply import get_keyboard
+from utils.message_utils import delete_regular_messages, delete_keyboard_messages, delete_bot_and_user_messages
 
 user_bank = {}
 
@@ -42,7 +40,7 @@ async def starting_at_bank(message: types.Message, session: AsyncSession):
 
 
 @bank_router.callback_query(lambda callback_query: callback_query.data.startswith("bank_"))
-async def process_bank_selection(callback_query: types.CallbackQuery):
+async def process_bank_selection(callback_query: CallbackQuery):
     bank_id = int(callback_query.data.split('_')[-1])
     buttons = {
         "Вклады": f"deposits_{bank_id}",
@@ -89,32 +87,48 @@ class AddBank(StatesGroup):
 
 
 @bank_router.callback_query(StateFilter(None), F.data.startswith('change_bank'))
-async def change_bank(callback: types.CallbackQuery, state: FSMContext, session: AsyncSession):
-    bank_id = int(callback.data.split(":")[-1])
+async def change_bank(callback_query: CallbackQuery, state: FSMContext, session: AsyncSession):
+    bank_id = int(callback_query.data.split(":")[-1])
     bank_for_change = await orm_get_bank_by_id(session, bank_id)
 
     AddBank.bank_for_change = bank_for_change
 
-    await callback.answer()
-    await callback.message.answer("Введите название банка", reply_markup=BANK_CANCEL_FSM)
+    keyboard_message = await callback_query.message.answer(
+        "В режиме изменения, если поставить точку, данное поле будет прежним,"
+        "а процесс перейдет к следующему полю объекта.\nИзмените данные:",
+        reply_markup=BANK_CANCEL_FSM)
+    bot_message = await callback_query.message.answer("Введите название банка")
+    await state.update_data(keyboard_message_id=[keyboard_message.message_id], message_ids=[bot_message.message_id])
+
     await state.set_state(AddBank.name)
 
 
 @bank_router.callback_query(StateFilter(None), F.data.startswith('add_bank'))
-async def add_bank(callback: types.CallbackQuery, state: FSMContext):
-    await callback.message.answer("Введите название банка", reply_markup=BANK_CANCEL_FSM)
+async def add_bank(callback_query: CallbackQuery, state: FSMContext):
+    keyboard_message = await callback_query.message.answer("Заполните данные:", reply_markup=BANK_CANCEL_FSM)
+    bot_message = await callback_query.message.answer("Введите название банка")
+    await state.update_data(keyboard_message_id=[keyboard_message.message_id], message_ids=[bot_message.message_id])
+
     await state.set_state(AddBank.name)
 
 
 @bank_router.message(StateFilter('*'), Command('Отменить действие с банком'))
 @bank_router.message(StateFilter('*'), F.text.casefold() == 'отменить действие с банком')
 async def cancel_handler(message: types.Message, state: FSMContext) -> None:
+    data = await state.get_data()
+
+    await delete_regular_messages(data, message)
+
     current_state = await state.get_state()
     if current_state is None:
         return
 
     await state.clear()
-    await message.answer("Действия отменены", reply_markup=types.ReplyKeyboardRemove())
+
+    bot_message = await message.answer("Действия отменены", reply_markup=types.ReplyKeyboardRemove())
+    await state.update_data(message_ids=[message.message_id, bot_message.message_id])
+
+    await delete_bot_and_user_messages(data, message, bot_message)
 
 
 @bank_router.message(AddBank.name, or_f(F.text))
@@ -122,13 +136,16 @@ async def add_name(message: types.Message, state: FSMContext, session: AsyncSess
     user_tg_id = message.from_user.id
     user_id = await orm_get_user(session, user_tg_id)
 
+    data = await state.get_data()
+
+    await delete_regular_messages(data, message)
+
     if message.text == '.' and AddBank.bank_for_change:
         await state.update_data(name=AddBank.bank_for_change.name)
     else:
-        if len(message.text) >= 150:
-            await message.answer(
-                "Название банка не должно превышать 150 символов. \n Введите заново"
-            )
+        if len(message.text) >= 50:
+            bot_message = await message.answer("Название банка не должно превышать 50 символов. \n Введите заново")
+            await state.update_data(message_ids=[message.message_id, bot_message.message_id])
             return
 
         try:
@@ -144,7 +161,8 @@ async def add_name(message: types.Message, state: FSMContext, session: AsyncSess
                 await state.update_data(name=name)
 
         except ValueError as e:
-            await message.answer(f"Ошибка: {e}. Пожалуйста, введите другое название:")
+            bot_message = await message.answer(f"Ошибка: {e}. Пожалуйста, введите другое название:")
+            await state.update_data(message_ids=[message.message_id, bot_message.message_id])
             return
 
     data = await state.get_data()
@@ -153,8 +171,12 @@ async def add_name(message: types.Message, state: FSMContext, session: AsyncSess
             await orm_update_bank(session, AddBank.bank_for_change.id, data)
         else:
             await orm_add_bank(session, data, message)
-        await message.answer("Товар добавлен", reply_markup=types.ReplyKeyboardRemove())
+
+        bot_message = await message.answer("Банк добавлен", reply_markup=types.ReplyKeyboardRemove())
+        await state.update_data(message_ids=[message.message_id, bot_message.message_id])
         await state.clear()
+
+        await delete_bot_and_user_messages(data, message, bot_message)
 
     except Exception as e:
         print(f"Ошибка {e}")
