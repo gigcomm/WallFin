@@ -22,7 +22,7 @@ from database.orm_query import (
     orm_delete_fund,
     orm_get_share_by_stockmarket_id,
     orm_delete_share,
-    orm_get_stock_market_by_id)
+    orm_get_stock_market_by_id, orm_delete_currency)
 
 from tg_bot.keyboards.inline import (
     get_user_main_btns,
@@ -269,8 +269,8 @@ async def currencies(session, level, menu_name, bank_id, bank_name, page):
     paginator = Paginator(currencies_list, page=page)
 
     if menu_name == "delete_currency":
-        deposit = paginator.get_page()[0]
-        await orm_delete_deposit(session, deposit.id)
+        currency = paginator.get_page()[0]
+        await orm_delete_currency(session, currency.id)
 
         currencies_list = await orm_get_currency_by_bank_id(session, bank_id)
         paginator = Paginator(currencies_list, page=page)
@@ -609,8 +609,5 @@ async def get_menu_content(
         if menu_name in ["Фонды", "delete_fund", "change_fund"]:
             return await funds(session, level, menu_name, stockmarket_id, stockmarket.name, page)
 
-    stockmarket = await orm_get_stock_market_by_id(session, stockmarket_id)
-
-    if level == 4:
         if menu_name in ["Акции", "delete_share", "change_share"]:
             return await shares(session, level, menu_name, stockmarket_id, stockmarket.name, page)
