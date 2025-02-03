@@ -121,9 +121,9 @@ async def add_name(message: types.Message, state: FSMContext, session: AsyncSess
     if message.text == '.' and AddFund.fund_for_change:
         await state.update_data(name=AddFund.fund_for_change.name)
     else:
-        if len(message.text) >= 150:
+        if len(message.text) >= 50:
             await message.answer(
-                "Название фонда не должно превышать 150 символов. \n Введите заново"
+                "Название фонда не должно превышать 50 символов. \n Введите заново"
             )
             return
 
