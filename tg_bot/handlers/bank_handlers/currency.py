@@ -1,18 +1,16 @@
 from aiogram.types import CallbackQuery
-from requests import session
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database.orm_query import (
     orm_add_currency,
-    orm_delete_currency,
     orm_get_currency,
     orm_update_currency,
     check_existing_currency, orm_get_user)
 
 from tg_bot.handlers.common_imports import *
 from parsers.parser_currency_rate import get_exchange_rate
-from tg_bot.keyboards.inline import get_callback_btns
 from tg_bot.keyboards.reply import get_keyboard
+from utils.message_utils import delete_regular_messages, delete_bot_and_user_messages
 
 currency_router = Router()
 
@@ -75,15 +73,20 @@ class AddCurrency(StatesGroup):
 
 
 @currency_router.callback_query(StateFilter(None), F.data.startswith("change_currency"))
-async def change_currency(callback: types.CallbackQuery, state: FSMContext, session: AsyncSession):
-    currency_id = int(callback.data.split(":")[-1])
+async def change_currency(callback_query: CallbackQuery, state: FSMContext, session: AsyncSession):
+    currency_id = int(callback_query.data.split(":")[-1])
     await state.update_data(currency_id=currency_id)
     currency_for_change = await orm_get_currency(session, currency_id)
 
     AddCurrency.currency_for_change = currency_for_change
 
-    await callback.answer()
-    await callback.message.answer("Введите название валюты, например USD", reply_markup=CURRENCY_CANCEL_AND_BACK_FSM)
+    keyboard_message = await callback_query.message.answer(
+        "В режиме изменения, если поставить точку, данное поле будет прежним,"
+        "а процесс перейдет к следующему полю объекта.\nИзмените данные:",
+        reply_markup=CURRENCY_CANCEL_FSM)
+    bot_message = await callback_query.message.answer("Введите название валюты, например USD")
+    await state.update_data(keyboard_message_id=[keyboard_message.message_id], message_ids=[bot_message.message_id])
+
     await state.set_state(AddCurrency.name)
 
 
@@ -91,29 +94,44 @@ async def change_currency(callback: types.CallbackQuery, state: FSMContext, sess
 async def add_currency(callback_query: CallbackQuery, state: FSMContext):
     bank_id = int(callback_query.data.split(':')[-1])
     await state.update_data(bank_id=bank_id)
-    await (callback_query.message.answer("Введите название валюты, например USD", reply_markup=CURRENCY_CANCEL_FSM))
+
+    keyboard_message = await callback_query.message.answer("Заполните данные:", reply_markup=CURRENCY_CANCEL_FSM)
+    bot_message = await (callback_query.message.answer("Введите название валюты, например USD", reply_markup=CURRENCY_CANCEL_FSM))
+    await state.update_data(keyboard_message_id=[keyboard_message.message_id], message_ids=[bot_message.message_id])
+
     await state.set_state(AddCurrency.name)
 
 
 @currency_router.message(StateFilter('*'), Command("Отменить действие с валютой"))
 @currency_router.message(StateFilter('*'), F.text.casefold() == "отменить действие с валютой")
 async def cancel_handler(message: types.Message, state: FSMContext) -> None:
+    data = await state.get_data()
+
+    await delete_regular_messages(data, message)
+
     current_state = await state.get_state()
     if current_state is None:
         return
     if AddCurrency.currency_for_change:
         AddCurrency.currency_for_change = None
     await state.clear()
-    await message.answer("Действия отменены", reply_markup=types.ReplyKeyboardRemove())
+    bot_message = await message.answer("Действия отменены", reply_markup=types.ReplyKeyboardRemove())
+    await state.update_data(message_ids=[message.message_id, bot_message.message_id])
+
+    await delete_bot_and_user_messages(data, message, bot_message)
 
 
 @currency_router.message(StateFilter('*'), Command("Назад к предыдущему шагу для валюты"))
 @currency_router.message(StateFilter('*'), F.text.casefold() == "назад к предыдущему шагу для валюты")
 async def back_handler(message: types.Message, state: FSMContext) -> None:
+    data = await state.get_data()
+
+    await delete_regular_messages(data, message)
     current_state = await state.get_state()
 
     if current_state == AddCurrency.name:
-        await message.answer("Предыдущего шага нет, введите название валюты или нажмите ниже на кнопку отмены")
+        bot_message = await message.answer("Предыдущего шага нет, введите название валюты или нажмите ниже на кнопку отмены")
+        await state.update_data(message_ids=[message.message_id, bot_message.message_id])
         return
 
     previous = None
@@ -121,7 +139,8 @@ async def back_handler(message: types.Message, state: FSMContext) -> None:
 
         if step.state == current_state:
             await state.set_state(previous)
-            await message.answer(f"Вы вернулись к прошлому шагу \n {AddCurrency.texts[previous.state]}")
+            bot_message = await message.answer(f"Вы вернулись к прошлому шагу \n {AddCurrency.texts[previous.state]}")
+            await state.update_data(message_ids=[message.message_id, bot_message.message_id])
             return
         previous = step
 
@@ -131,13 +150,15 @@ async def add_name(message: types.Message, state: FSMContext, session: AsyncSess
     user_tg_id = message.from_user.id
     user_id = await orm_get_user(session, user_tg_id)
 
+    data = await state.get_data()
+    await delete_regular_messages(data, message)
+
     if message.text == '.' and AddCurrency.currency_for_change:
         await state.update_data(name=AddCurrency.currency_for_change.name)
     else:
-        if len(message.text) >= 150:
-            await message.answer(
-                "Название валюты не должно превышать 150 символов. \n Введите заново"
-            )
+        if len(message.text) >= 50:
+            bot_message = await message.answer("Название валюты не должно превышать 50 символов. \n Введите заново")
+            await state.update_data(message_ids=[message.message_id, bot_message.message_id])
             return
 
         try:
@@ -153,29 +174,38 @@ async def add_name(message: types.Message, state: FSMContext, session: AsyncSess
                 await state.update_data(name=name)
 
         except ValueError as e:
-            await message.answer(f"Ошибка: {e}. Пожалуйста, введите другое название:")
+            bot_message = await message.answer(f"Ошибка: {e}. Пожалуйста, введите другое название:")
+            await state.update_data(message_ids=[message.message_id, bot_message.message_id])
             return
 
     data = await state.get_data()
     currency_name = data['name']
-    await message.answer(f"Введите количество валюты {currency_name} на балансе")
+    bot_message = await message.answer(f"Введите количество валюты {currency_name} на балансе")
+    await state.update_data(message_ids=[message.message_id, bot_message.message_id])
+
     await state.set_state(AddCurrency.balance)
 
 
 @currency_router.message(AddCurrency.balance, F.text)
 async def add_balance(message: types.Message, state: FSMContext):
+    data = await state.get_data()
+    await delete_regular_messages(data, message)
+
     if message.text == '.' and AddCurrency.currency_for_change:
         await state.update_data(balance=AddCurrency.currency_for_change.balance)
     else:
         await state.update_data(balance=message.text)
-    await message.answer(
+    bot_message = await message.answer(
         "Введите курс данной валюты или определите его автоматичекси, написав слово 'авто' в поле ввода")
+    await state.update_data(message_ids=[message.message_id, bot_message.message_id])
+
     await state.set_state(AddCurrency.market_price)
 
 
 @currency_router.message(AddCurrency.market_price, F.text)
 async def add_market_price(message: types.Message, state: FSMContext, session: AsyncSession):
     data = await state.get_data()
+    await delete_regular_messages(data, message)
     currency_name = data['name']
 
     if message.text == '.' and AddCurrency.currency_for_change:
@@ -186,16 +216,19 @@ async def add_market_price(message: types.Message, state: FSMContext, session: A
             try:
                 auto_market_price = get_exchange_rate(currency_name, 'RUB')
                 await state.update_data(market_price=auto_market_price)
-                await message.answer(f"Курс {currency_name} к RUB автоматически установлен: {auto_market_price}")
+                bot_message = await message.answer(f"Курс {currency_name} к RUB автоматически установлен: {auto_market_price}")
+                await state.update_data(message_ids=[message.message_id, bot_message.message_id])
             except Exception as e:
-                await message.answer(f"Не удалось получить курс валюты: {e}")
+                bot_message = await message.answer(f"Не удалось получить курс валюты: {e}")
+                await state.update_data(message_ids=[message.message_id, bot_message.message_id])
                 return
         else:
             try:
                 market_price = float(market_price)
                 await state.update_data(market_price=market_price)
             except ValueError:
-                await message.answer("Введите корректное числовое значение для курса валюты.")
+                bot_message = await message.answer("Введите корректное числовое значение для курса валюты.")
+                await state.update_data(message_ids=[message.message_id, bot_message.message_id])
                 return
 
     data = await state.get_data()
@@ -204,8 +237,12 @@ async def add_market_price(message: types.Message, state: FSMContext, session: A
             await orm_update_currency(session, data["currency_id"], data)
         else:
             await orm_add_currency(session, data)
-        await message.answer("Валюта добалена/изменена", reply_markup=types.ReplyKeyboardRemove())
+
+        bot_message = await message.answer("Валюта добалена/изменена", reply_markup=types.ReplyKeyboardRemove())
+        await state.update_data(message_ids=[message.message_id, bot_message.message_id])
         await state.clear()
+
+        await delete_bot_and_user_messages(data, message, bot_message)
 
     except Exception as e:
         await message.answer(f"Ошибка {e}, обратитесь к @gigcomm, чтобы исправить ее!")
