@@ -1,7 +1,7 @@
 import asyncio
 
 from aiogram import types
-from tg_bot.core import bot, dp
+from core import bot, dp
 
 from middlewares.db import DataBaseSession
 
@@ -9,12 +9,11 @@ from database.engine import create_db, drop_db, session_maker
 
 from handlers.user_private import user_private_router
 from command.bot_cmds_list import private
-from tg_bot.handlers.admin_private import admin_router
-from tg_bot.handlers.bank_handlers.bank import bank_router
-from tg_bot.handlers.cryptomarket_handlers.cryptomarket import cryptomarket_router
-from tg_bot.handlers.stock_market_handlers.stock_market import stock_market_router
-
-from celery_app import test_task
+from handlers.admin_private import admin_router
+from handlers.bank_handlers.bank import bank_router
+from handlers.cryptomarket_handlers.cryptomarket import cryptomarket_router
+from handlers.stock_market_handlers.stock_market import stock_market_router
+from tasks.update_price_assets import test_task
 
 
 dp.include_router(user_private_router)
@@ -30,8 +29,9 @@ async def on_startup(bot):
         await drop_db()
     await create_db()
 
-    # loop = asyncio.get_running_loop()
-    # loop.run_in_executor(None, test_task.delay)
+    # Запуск задачи update_prices в фоновом режиме
+    # test_task.delay()
+
 
 async def on_shutdown(bot):
     print('Бот упал')
