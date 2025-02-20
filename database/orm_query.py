@@ -267,6 +267,11 @@ async def orm_get_currency_by_bank_id(session: AsyncSession, bank_id: int):
     return result.scalars().all()
 
 
+async def orm_get_currency_all(session: AsyncSession):
+    result = await session.execute(select(Currency))
+    return result.scalars().all()
+
+
 async def orm_update_currency(session: AsyncSession, currency_id: int, data):
     query = update(Currency).where(Currency.id == currency_id).values(
         name=data["name"],
@@ -363,6 +368,11 @@ async def orm_get_share_by_stockmarket_id(session: AsyncSession, stockmarket_id:
     return result.scalars().all()
 
 
+async def orm_get_share_all(session: AsyncSession):
+    result = await session.execute(select(Share))
+    return result.scalars().all()
+
+
 async def orm_update_share(session: AsyncSession, share_id: int, data):
     query = update(Share).where(Share.id == share_id).values(
         name=data["name"],
@@ -413,6 +423,11 @@ async def orm_get_fund_by_stockmarket_id(session: AsyncSession, stockmarket_id: 
     return result.scalars().all()
 
 
+async def orm_get_fund_all(session: AsyncSession):
+    result = await session.execute(select(Fund))
+    return result.scalars().all()
+
+
 async def orm_update_fund(session: AsyncSession, fund_id: int, data):
     query = update(Fund).where(Fund.id == fund_id).values(
         name=data["name"],
@@ -459,6 +474,11 @@ async def orm_get_cryptocurrency(session: AsyncSession, cryptocurrency_id: int):
 
 async def orm_get_cryptocurrency_by_cryptomarket_id(session: AsyncSession, cryptomarket_id: int):
     result = await session.execute(select(Cryptocurrency).where(Cryptocurrency.cryptomarket_id == cryptomarket_id))
+    return result.scalars().all()
+
+
+async def orm_get_cryptocurrency_all(session: AsyncSession):
+    result = await session.execute(select(Cryptocurrency))
     return result.scalars().all()
 
 
