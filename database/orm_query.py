@@ -462,7 +462,7 @@ async def orm_add_cryptocurrency(session: AsyncSession, data: dict):
 
 async def check_existing_cryptocurrency(session: AsyncSession, name: str, user_id: int):
     result = await session.execute(
-        select(Currency.name).join(CryptoMarket, CryptoMarket.id == Cryptocurrency.cryptomarket_id).where(
+        select(Cryptocurrency.name).join(CryptoMarket, CryptoMarket.id == Cryptocurrency.cryptomarket_id).where(
             Cryptocurrency.name == name, CryptoMarket.user_id == user_id))
     return result.scalar_one_or_none()
 
