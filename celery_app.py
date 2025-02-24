@@ -17,8 +17,13 @@ import tasks.update_price_assets
 celery_app.autodiscover_tasks(["tasks"])
 
 celery_app.conf.beat_schedule = {
-    'print-every-10-seconds': {
+    'print-every-60-seconds': {
         'task': 'tasks.update_price_assets.test_task',
         'schedule': 60.0,  # Запуск каждые 60 секунд
     },
+
+    'update_assets': {
+        'task': 'tasks.update_price_assets.update_price',
+        'schedule': 60.0
+    }
 }
