@@ -5,6 +5,7 @@ from database.orm_query import orm_add_fund, orm_get_fund, orm_update_fund, chec
 from tg_bot.handlers.common_imports import *
 from tg_bot.keyboards.reply import get_keyboard
 from parsers.tinkoff_invest_API import get_price_fund
+from utils.message_utils import delete_regular_messages, delete_bot_and_user_messages
 
 fund_router = Router()
 
@@ -70,8 +71,13 @@ async def change_fund(callback_query: types.CallbackQuery, state: FSMContext, se
     fund_for_change = await orm_get_fund(session, fund_id)
     AddFund.fund_for_change = fund_for_change
 
-    await callback_query.answer()
-    await callback_query.message.answer("Введите тикер фонда, например, TITR", reply_markup=FUND_CANCEL_AND_BACK_FSM)
+    keyboard_message = await callback_query.answer(
+        "В режиме изменения, если поставить точку, данное поле будет прежним,"
+        "а процесс перейдет к следующему полю объекта.\nИзмените данные:",
+        reply_markup=FUND_CANCEL_AND_BACK_FSM)
+    bot_message = await callback_query.message.answer("Введите тикер фонда, например, TITR")
+    await state.update_data(keyboard_message_id=[keyboard_message.message_id], message_ids=[bot_message.message_id])
+
     await state.set_state(AddFund.name)
 
 
@@ -79,36 +85,53 @@ async def change_fund(callback_query: types.CallbackQuery, state: FSMContext, se
 async def add_fund(callback_query: CallbackQuery, state: FSMContext):
     stockmarket_id = int(callback_query.data.split(":")[-1])
     await state.update_data(stockmarket_id=stockmarket_id)
-    await callback_query.message.answer("Введите тикер фонда, например, TITR", reply_markup=FUND_CANCEL_FSM)
+
+    keyboard_message = await callback_query.message.answer("Заполните данные:", reply_markup=FUND_CANCEL_FSM)
+    bot_message = await callback_query.message.answer("Введите тикер фонда, например, TITR")
+    await state.update_data(keyboard_message_id=[keyboard_message.message_id], message_ids=[bot_message.message_id])
+
     await state.set_state(AddFund.name)
 
 
 @fund_router.message(StateFilter('*'), Command('Отменить действие с фондом'))
 @fund_router.message(StateFilter('*'), F.text.casefold() == 'отменить действие с фондом')
 async def cancel_handler(message: types.Message, state: FSMContext) -> None:
+    data = await state.get_data()
+
+    await delete_regular_messages(data, message)
+
     current_state = await state.get_state()
     if current_state is None:
         return
     if AddFund.fund_for_change:
         AddFund.fund_for_change = None
     await state.clear()
-    await message.answer("Действия отменены", reply_markup=types.ReplyKeyboardRemove())
+    bot_message = await message.answer("Действия отменены", reply_markup=types.ReplyKeyboardRemove())
+    await state.update_data(message_ids=[message.message_id, bot_message.message_id])
+
+    await delete_bot_and_user_messages(data, message, bot_message)
 
 
 @fund_router.message(StateFilter('*'), Command('Назад к предыдущему шагу для фонда'))
 @fund_router.message(StateFilter('*'), F.text.casefold() == "назад к предыдущему шагу для фонда")
 async def back_handler(message: types.Message, state: FSMContext) -> None:
+    data = await state.get_data()
+
+    await delete_regular_messages(data, message)
+
     current_state = await state.get_state()
 
     if current_state == AddFund.name:
-        await message.answer("Предыдущего шага нет, введите название фонда или нажмите ниже на кнопку отмены")
+        bot_message = await message.answer("Предыдущего шага нет, введите название фонда или нажмите ниже на кнопку отмены")
+        await state.update_data(message_ids=[message.message_id, bot_message.message_id])
         return
 
     previous = None
     for step in AddFund.__all_states__:
         if step.state == current_state:
             await state.set_state(previous)
-            await message.answer(f"Вы вернулись к прошлому шагу \n {AddFund.texts[previous.state]}")
+            bot_message = await message.answer(f"Вы вернулись к прошлому шагу \n {AddFund.texts[previous.state]}")
+            await state.update_data(message_ids=[message.message_id, bot_message.message_id])
             return
         previous = step
 
@@ -122,9 +145,8 @@ async def add_name(message: types.Message, state: FSMContext, session: AsyncSess
         await state.update_data(name=AddFund.fund_for_change.name)
     else:
         if len(message.text) >= 50:
-            await message.answer(
-                "Название фонда не должно превышать 50 символов. \n Введите заново"
-            )
+            bot_message = await message.answer("Название фонда не должно превышать 50 символов. \n Введите заново")
+            await state.update_data(message_ids=[message.message_id, bot_message.message_id])
             return
 
         try:
@@ -143,7 +165,9 @@ async def add_name(message: types.Message, state: FSMContext, session: AsyncSess
             await message.answer(f"Ошибка: {e}. Пожалуйста, введите другое название:")
             return
 
-    await message.answer("Введите цену покупки фонда")
+    bot_message = await message.answer("Введите цену покупки фонда")
+    await state.update_data(message_ids=[message.message_id, bot_message.message_id])
+
     await state.set_state(AddFund.purchase_price)
 
 
@@ -153,7 +177,10 @@ async def add_purchase_price(message: types.Message, state: FSMContext):
         await state.update_data(purchase_price=AddFund.fund_for_change.purchase_price)
     else:
         await state.update_data(purchase_price=message.text)
-    await message.answer("Введите цену продажи фонда")
+
+    bot_message = await message.answer("Введите цену продажи фонда")
+    await state.update_data(message_ids=[message.message_id, bot_message.message_id])
+
     await state.set_state(AddFund.selling_price)
 
 
@@ -163,8 +190,11 @@ async def add_selling_price(message: types.Message, state: FSMContext):
         await state.update_data(selling_price=AddFund.fund_for_change.selling_price)
     else:
         await state.update_data(selling_price=message.text)
-    await message.answer(
+
+    bot_message = await message.answer(
         "Введите цену фонда на фондовой бирже или введите слово 'авто' для автоматического определения текущей цены фонда")
+    await state.update_data(message_ids=[message.message_id, bot_message.message_id])
+
     await state.set_state(AddFund.market_price)
 
 
@@ -181,11 +211,13 @@ async def add_market_price(message: types.Message, state: FSMContext):
             try:
                 auto_market_price, currency = await get_price_fund(fund_name)
                 if auto_market_price is None:
-                    await message.answer("Введите корректное числовое значение для цены фонда")
+                    bot_message = await message.answer("Введите корректное числовое значение для цены фонда")
+                    await state.update_data(message_ids=[message.message_id, bot_message.message_id])
                     return
 
                 await state.update_data(market_price=auto_market_price, currency=currency)
-                await message.answer(f"Курс {fund_name} на финбирже автоматически установлен: {auto_market_price}")
+                bot_message = await message.answer(f"Курс {fund_name} на финбирже автоматически установлен: {auto_market_price}")
+                await state.update_data(message_ids=[message.message_id, bot_message.message_id])
             except Exception as e:
                 await message.answer(f"Не удалось получить цену фонда: {e}")
                 return
@@ -196,14 +228,17 @@ async def add_market_price(message: types.Message, state: FSMContext):
 
                 currency = data.get('currency')
                 if not currency:
-                    await message.answer("Введите валюту для фонда (например, RUB, USD, EUR):")
+                    bot_message = await message.answer("Введите валюту для фонда (например, RUB, USD, EUR):")
+                    await state.update_data(message_ids=[message.message_id, bot_message.message_id])
                     await state.set_state(AddFund.currency)
                     return
             except ValueError:
                 await message.answer("Введите корректное числовое значение для цены фонда")
                 return
 
-    await message.answer("Введите валюту для фонда (например, RUB, USD, EUR):")
+    bot_message = await message.answer("Введите валюту для фонда (например, RUB, USD, EUR):")
+    await state.update_data(message_ids=[message.message_id, bot_message.message_id])
+
     await state.set_state(AddFund.currency)
 
 
@@ -216,14 +251,17 @@ async def add_currency(message: types.Message, state: FSMContext):
 
         valid_currencies = ['RUB', 'USD', 'EUR']
         if currency not in valid_currencies:
-            await message.answer("Введите корректный код валюты (например, RUB, USD, EUR):")
+            bot_message = await message.answer("Введите корректный код валюты (например, RUB, USD, EUR):")
+            await state.update_data(message_ids=[message.message_id, bot_message.message_id])
             return
 
         await state.update_data(currency=currency)
         updated_data = await state.get_data()
         print(f"Обновленные данные после ввода валюты: {updated_data}")
 
-    await message.answer("Введите количество бумаг акции:")
+    bot_message = await message.answer("Введите количество бумаг акции:")
+    await state.update_data(message_ids=[message.message_id, bot_message.message_id])
+
     await state.set_state(AddFund.quantity)
 
 
@@ -240,11 +278,15 @@ async def add_quantity(message: types.Message, state: FSMContext, session: Async
             await orm_update_fund(session, AddFund.fund_for_change.id, data)
         else:
             await orm_add_fund(session, data)
-        await message.answer("Бумага фонда добавлены", reply_markup=types.ReplyKeyboardRemove())
+
+        bot_message = await message.answer("Бумага фонда добавлены", reply_markup=types.ReplyKeyboardRemove())
+        await state.update_data(message_ids=[message.message_id, bot_message.message_id])
         await state.clear()
 
+        await delete_bot_and_user_messages(data, message, bot_message)
+
     except Exception as e:
-        await message.answer(f"Ошибка, обратитесь к @gigcomm, чтобы исправить ее!")
+        await message.answer(f"Ошибка {e}, обратитесь к @gigcomm, чтобы исправить ее!")
         await state.clear()
 
     AddFund.fund_for_change = None

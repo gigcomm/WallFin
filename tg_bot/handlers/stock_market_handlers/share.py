@@ -6,7 +6,7 @@ from database.orm_query import orm_add_share, orm_delete_share, orm_get_share, o
 from tg_bot.handlers.common_imports import *
 from tg_bot.keyboards.reply import get_keyboard
 from parsers.tinkoff_invest_API import get_price_share
-
+from utils.message_utils import delete_regular_messages, delete_bot_and_user_messages
 
 share_router = Router()
 
@@ -73,8 +73,12 @@ async def change_share(callback_query: CallbackQuery, state: FSMContext, session
     share_for_change = await orm_get_share(session, share_id)
     AddShare.share_for_change = share_for_change
 
-    await callback_query.answer()
-    await callback_query.message.answer("Введите тикер акции, например: SBER, AAPL...", reply_markup=SHARE_CANCEL_AND_BACK_FSM)
+    keyboard_message = await callback_query.answer("В режиме изменения, если поставить точку, данное поле будет прежним,"
+        "а процесс перейдет к следующему полю объекта.\nИзмените данные:",
+        reply_markup=SHARE_CANCEL_AND_BACK_FSM)
+    bot_message = await callback_query.message.answer("Введите тикер акции, например: SBER, AAPL...", reply_markup=SHARE_CANCEL_AND_BACK_FSM)
+    await state.update_data(keyboard_message_id=[keyboard_message.message_id], message_ids=[bot_message.message_id])
+
     await state.set_state(AddShare.name)
 
 
@@ -82,38 +86,53 @@ async def change_share(callback_query: CallbackQuery, state: FSMContext, session
 async def add_cryptomarket(callback_query: CallbackQuery, state: FSMContext):
     stockmarket_id = int(callback_query.data.split(":")[-1])
     await state.update_data(stockmarket_id=stockmarket_id)
-    await callback_query.message.answer(
-        "Введите тикер акции, например: SBER, AAPL...", reply_markup=SHARE_CANCEL_FSM
-    )
+
+    keyboard_message = await callback_query.message.answer("Заполните данные:", reply_markup=SHARE_CANCEL_FSM)
+    bot_message = await callback_query.message.answer("Введите тикер акции, например: SBER, AAPL...")
+    await state.update_data(keyboard_message_id=[keyboard_message.message_id], message_ids=[bot_message.message_id])
+
     await state.set_state(AddShare.name)
 
 
 @share_router.message(StateFilter('*'), Command('Отменить действие с акцией'))
 @share_router.message(StateFilter('*'), F.text.casefold() == 'отменить действие с акцией')
 async def cancel_handler(message: types.Message, state: FSMContext) -> None:
+    data = await state.get_data()
+
+    await delete_regular_messages(data, message)
+
     current_state = await state.get_state()
     if current_state is None:
         return
     if AddShare.share_for_change:
         AddShare.share_for_change = None
     await state.clear()
-    await message.answer("Действия отменены", reply_markup=types.ReplyKeyboardRemove())
+    bot_message = await message.answer("Действия отменены", reply_markup=types.ReplyKeyboardRemove())
+    await state.update_data(message_ids=[message.message_id, bot_message.message_id])
+
+    await delete_bot_and_user_messages(data, message, bot_message)
 
 
 @share_router.message(StateFilter('*'), Command('Назад к предыдущему шагу для акции'))
 @share_router.message(StateFilter('*'), F.text.casefold() == "назад к предыдущему шагу для акции")
 async def back_handler(message: types.Message, state: FSMContext) -> None:
+    data = await state.get_data()
+
+    await delete_regular_messages(data, message)
+
     current_state = await state.get_state()
 
     if current_state == AddShare.name:
-        await message.answer("Предыдущего шага нет, введите название акции или нажмите ниже на кнопку отмены")
+        bot_message = await message.answer("Предыдущего шага нет, введите название акции или нажмите ниже на кнопку отмены")
+        await state.update_data(message_ids=[message.message_id, bot_message.message_id])
         return
 
     previous = None
     for step in AddShare.__all_states__:
         if step.state == current_state:
             await state.set_state(previous)
-            await message.answer(f"Вы вернулись к прошлому шагу \n {AddShare.texts[previous.state]}")
+            bot_message = await message.answer(f"Вы вернулись к прошлому шагу \n {AddShare.texts[previous.state]}")
+            await state.update_data(message_ids=[message.message_id, bot_message.message_id])
             return
         previous = step
 
@@ -127,9 +146,8 @@ async def add_name(message: types.Message, state: FSMContext, session: AsyncSess
         await state.update_data(name=AddShare.share_for_change.name)
     else:
         if len(message.text) >= 50:
-            await message.answer(
-                "Название акции не должно превышать 50 символов. \n Введите заново"
-            )
+            bot_message = await message.answer("Название акции не должно превышать 50 символов. \n Введите заново")
+            await state.update_data(message_ids=[message.message_id, bot_message.message_id])
             return
 
         try:
@@ -148,7 +166,9 @@ async def add_name(message: types.Message, state: FSMContext, session: AsyncSess
             await message.answer(f"Ошибка: {e}. Пожалуйста, введите другое название:")
             return
 
-    await message.answer("Введите цену покупки акции")
+    bot_message = await message.answer("Введите цену покупки акции")
+    await state.update_data(message_ids=[message.message_id, bot_message.message_id])
+
     await state.set_state(AddShare.purchase_price)
 
 
@@ -158,7 +178,10 @@ async def add_purchase_price(message: types.Message, state: FSMContext):
         await state.update_data(purchase_price=AddShare.share_for_change.purchase_price)
     else:
         await state.update_data(purchase_price=message.text)
-    await message.answer("Введите цену продажи акции")
+
+    bot_message = await message.answer("Введите цену продажи акции")
+    await state.update_data(message_ids=[message.message_id, bot_message.message_id])
+
     await state.set_state(AddShare.selling_price)
 
 
@@ -168,8 +191,11 @@ async def add_selling_price(message: types.Message, state: FSMContext):
         await state.update_data(selling_price=AddShare.share_for_change.selling_price)
     else:
         await state.update_data(selling_price=message.text)
-    await message.answer(
+
+    bot_message = await message.answer(
         "Введите цену акции на фондовой бирже или напишите слово 'авто' для автоматического определения текущей цены акции")
+    await state.update_data(message_ids=[message.message_id, bot_message.message_id])
+
     await state.set_state(AddShare.market_price)
 
 
@@ -186,12 +212,13 @@ async def add_market_price(message: types.Message, state: FSMContext):
             try:
                 auto_market_price, currency = await get_price_share(share_name)
                 if auto_market_price is None:
-                    await message.answer("Введите корректное числовое значение для цены акции")
+                    bot_message = await message.answer("Введите корректное числовое значение для цены акции")
+                    await state.update_data(message_ids=[message.message_id, bot_message.message_id])
                     return
 
                 await state.update_data(market_price=auto_market_price, currency=currency)
-
-                await message.answer(f"Курс {share_name} на финбирже автоматически установлен: {auto_market_price}")
+                bot_message = await message.answer(f"Курс {share_name} на финбирже автоматически установлен: {auto_market_price}")
+                await state.update_data(message_ids=[message.message_id, bot_message.message_id])
             except Exception as e:
                 await message.answer(f"Не удалось получить цену акции: {e}")
                 return
@@ -202,7 +229,8 @@ async def add_market_price(message: types.Message, state: FSMContext):
 
                 currency = data.get('currency')
                 if not currency:
-                    await message.answer("Введите валюту для акции (например, RUB, USD, EUR):")
+                    bot_message = await message.answer("Введите валюту для акции (например, RUB, USD, EUR):")
+                    await state.update_data(message_ids=[message.message_id, bot_message.message_id])
                     await state.set_state(AddShare.currency)
                     return
 
@@ -210,7 +238,8 @@ async def add_market_price(message: types.Message, state: FSMContext):
                 await message.answer("Введите корректное числовое значение для цены акции")
                 return
 
-    await message.answer("Введите валюту для акции (например, RUB, USD, EUR):")
+    bot_message = await message.answer("Введите валюту для акции (например, RUB, USD, EUR):")
+    await state.update_data(message_ids=[message.message_id, bot_message.message_id])
     await state.set_state(AddShare.currency)
 
 
@@ -223,14 +252,17 @@ async def add_currency(message: types.Message, state: FSMContext):
 
         valid_currencies = ['RUB', 'USD', 'EUR']
         if currency not in valid_currencies:
-            await message.answer("Введите корректный код валюты (например, RUB, USD, EUR):")
+            bot_message = await message.answer("Введите корректный код валюты (например, RUB, USD, EUR):")
+            await state.update_data(message_ids=[message.message_id, bot_message.message_id])
             return
 
         await state.update_data(currency=currency)
         updated_data = await state.get_data()
         print(f"Обновленные данные после ввода валюты: {updated_data}")
 
-    await message.answer("Введите количество бумаг акции:")
+    bot_message = await message.answer("Введите количество бумаг акции:")
+    await state.update_data(message_ids=[message.message_id, bot_message.message_id])
+
     await state.set_state(AddShare.quantity)
 
 
@@ -247,8 +279,11 @@ async def add_quantity(message: types.Message, state: FSMContext, session: Async
             await orm_update_share(session, AddShare.share_for_change.id, data)
         else:
             await orm_add_share(session, data)
-        await message.answer("Бумага акции добавлена", reply_markup=types.ReplyKeyboardRemove())
+        bot_message = await message.answer("Бумага акции добавлена", reply_markup=types.ReplyKeyboardRemove())
+        await state.update_data(message_ids=[message.message_id, bot_message.message_id])
         await state.clear()
+
+        await delete_bot_and_user_messages(data, message, bot_message)
 
     except Exception as e:
         print(e)

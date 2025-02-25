@@ -9,6 +9,7 @@ from database.orm_query import (
 from tg_bot.handlers.common_imports import *
 from parsers.Bybit_API import get_price_cryptocurrency
 from tg_bot.keyboards.reply import get_keyboard
+from utils.message_utils import delete_regular_messages, delete_bot_and_user_messages
 
 cryptocurrency_router = Router()
 
@@ -49,8 +50,13 @@ async def change_cryptocurrency(callback_query: CallbackQuery, state: FSMContext
     cryptocurrency_for_change = await orm_get_cryptocurrency(session, cryptocurrency_id)
     AddСryptocurrency.cryptocurrency_for_change = cryptocurrency_for_change
 
-    await callback_query.answer()
-    await callback_query.message.answer("Введите название криптовалюты", reply_markup=CRYPTOCURRENCY_CANCEL_AND_BACK_FSM)
+    keyboard_message = await callback_query.message.answer(
+        "В режиме изменения, если поставить точку, данное поле будет прежним,"
+        "а процесс перейдет к следующему полю объекта.\nИзмените данные:",
+        reply_markup=CRYPTOCURRENCY_CANCEL_AND_BACK_FSM)
+    bot_message = await callback_query.message.answer("Введите название криптовалюты")
+    await state.update_data(keyboard_message_id=[keyboard_message.message_id], message_ids=[bot_message.message_id])
+
     await state.set_state(AddСryptocurrency.name)
 
 
@@ -58,30 +64,45 @@ async def change_cryptocurrency(callback_query: CallbackQuery, state: FSMContext
 async def add_cryptomarket(callback_query: CallbackQuery, state: FSMContext):
     cryptomarket_id = int(callback_query.data.split(":")[-1])
     await state.update_data(cryptomarket_id=cryptomarket_id)
-    await callback_query.message.answer(
-        "Введите название криптовалюты в сокращенном виде, например BTC", reply_markup=CRYPTOCURRENCY_CANCEL_FSM)
+
+    keyboard_message = await callback_query.message.answer("Заполните данные:", reply_markup=CRYPTOCURRENCY_CANCEL_FSM)
+    bot_message = await callback_query.message.answer("Введите название криптовалюты в сокращенном виде, например BTC")
+    await state.update_data(keyboard_message_id=[keyboard_message.message_id], message_ids=[bot_message.message_id])
+
     await state.set_state(AddСryptocurrency.name)
 
 
 @cryptocurrency_router.message(StateFilter('*'), Command("Отменить действие с криптовалютой"))
 @cryptocurrency_router.message(StateFilter('*'), F.text.casefold() == "отменить действие с криптовалютой")
 async def cancel_handler(message: types.Message, state: FSMContext) -> None:
+    data = await state.get_data()
+
+    await delete_regular_messages(data, message)
+
     current_state = await state.get_state()
     if current_state is None:
         return
     if AddСryptocurrency.cryptocurrency_for_change:
         AddСryptocurrency.cryptocurrency_for_change = None
     await state.clear()
-    await message.answer("Действия отменены", reply_markup=types.ReplyKeyboardRemove())
+    bot_message = await message.answer("Действия отменены", reply_markup=types.ReplyKeyboardRemove())
+    await state.update_data(message_id=[message.message_id, bot_message.message_id])
+
+    await delete_bot_and_user_messages(data, message, bot_message)
 
 
 @cryptocurrency_router.message(StateFilter('*'), Command("Назад к предыдущему шагу для криптовалюты"))
 @cryptocurrency_router.message(StateFilter('*'), F.text.casefold() == "назад к предыдущему шагу для криптовалюты")
 async def back_handler(message: types.Message, state: FSMContext) -> None:
+    data = await state.get_data()
+
+    await delete_regular_messages(data, message)
+
     current_state = await state.get_state()
 
     if current_state == AddСryptocurrency.name:
-        await message.answer("Предыдущего шага нет, введите название криптовалюты или нажмите ниже на кнопку отмены")
+        bot_messsage = await message.answer("Предыдущего шага нет, введите название криптовалюты или нажмите ниже на кнопку отмены")
+        await state.update_data(message_id=[message.message_id, bot_message.message_id])
         return
 
     previous = None
@@ -102,9 +123,8 @@ async def add_name(message: types.Message, state: FSMContext, session: AsyncSess
         await state.update_data(name=AddСryptocurrency.cryptocurrency_for_change.name)
     else:
         if len(message.text) >= 10:
-            await message.answer(
-                "Название криптовалюты не должно превышать 10 символов. \n Введите заново"
-            )
+            bot_message = await message.answer("Название криптовалюты не должно превышать 10 символов. \n Введите заново")
+            await state.update_data(message_id=[message.message_id, bot_message.message_id])
             return
 
         try:
@@ -120,10 +140,13 @@ async def add_name(message: types.Message, state: FSMContext, session: AsyncSess
                 await state.update_data(name=name.upper())
 
         except ValueError as e:
-            await message.answer(f"Ошибка: {e}. Пожалуйста, введите другое название:")
+            bot_message = await message.answer(f"Ошибка: {e}. Пожалуйста, введите другое название:")
+            await state.update_data(message_id=[message.message_id, bot_message.message_id])
             return
 
-    await message.answer("Введите количество криптовалюты")
+    bot_message = await message.answer("Введите количество криптовалюты")
+    await state.update_data(message_id=[message.message_id, bot_message.message_id])
+
     await state.set_state(AddСryptocurrency.balance)
 
 
@@ -136,10 +159,13 @@ async def add_balance(message: types.Message, state: FSMContext):
             cryptocurrency_balance = float(message.text)
             await state.update_data(balance=cryptocurrency_balance)
         except ValueError:
-            await message.answer("Некорректное значение баланса, введите число.")
+            bot_message = await message.answer("Некорректное значение баланса, введите число.")
+            await state.update_data(message_id=[message.message_id, bot_message.message_id])
             return
 
-    await message.answer("Введите цену покупки криптовалюты")
+    bot_message = await message.answer("Введите цену покупки криптовалюты")
+    await state.update_data(message_id=[message.message_id, bot_message.message_id])
+
     await state.set_state(AddСryptocurrency.purchase_price)
 
 
@@ -149,6 +175,7 @@ async def add_purchase_price(message: types.Message, state: FSMContext):
         await state.update_data(purchase_price=AddСryptocurrency.cryptocurrency_for_change.purchase_price)
     else:
         await state.update_data(purchase_price=message.text)
+
     await message.answer("Введите цену продажи криптовалюты")
     await state.set_state(AddСryptocurrency.selling_price)
 
@@ -159,9 +186,12 @@ async def add_selling_price(message: types.Message, state: FSMContext):
         await state.update_data(selling_price=AddСryptocurrency.cryptocurrency_for_change.selling_price)
     else:
         await state.update_data(selling_price=message.text)
-    await message.answer(
+
+    bot_message = await message.answer(
         "Введите цену криптовалюты на криптобирже или введите слово 'авто' для автоматического определения "
         "текущей цены криптовалюты")
+    await state.update_data(message_id=[message.message_id, bot_message.message_id])
+
     await state.set_state(AddСryptocurrency.market_price)
 
 
@@ -178,11 +208,14 @@ async def add_market_price(message: types.Message, state: FSMContext, session: A
             try:
                 auto_market_price = get_price_cryptocurrency(cryptocur_name)
                 if auto_market_price is None:
-                    await message.answer("Введите корректное числовое значение для цены криптовалюты")
+                    bot_message = await message.answer("Введите корректное числовое значение для цены криптовалюты")
+                    await state.update_data(message_id=[message.message_id, bot_message.message_id])
                     return
+
                 await state.update_data(market_price=auto_market_price)
-                await message.answer(
-                    f"Курс {cryptocur_name} на криптобирже автоматически установлен: {auto_market_price}")
+                bot_message = await message.answer(f"Курс {cryptocur_name} на криптобирже автоматически установлен: {auto_market_price}")
+                await state.update_data(message_id=[message.message_id, bot_message.message_id])
+
             except Exception as e:
                 await message.answer(f"Не удалось получить цену криптовалюты: {e}")
                 return
@@ -191,7 +224,8 @@ async def add_market_price(message: types.Message, state: FSMContext, session: A
                 market_price = float(market_price)
                 await state.update_data(market_price=market_price)
             except ValueError:
-                await message.answer("Введите корректное числовое значение для цены криптовалюты")
+                bot_message = await message.answer("Введите корректное числовое значение для цены криптовалюты")
+                await state.update_data(message_id=[message.message_id, bot_message.message_id])
                 return
 
     data = await state.get_data()
@@ -200,12 +234,15 @@ async def add_market_price(message: types.Message, state: FSMContext, session: A
             await orm_update_cryptocurrency(session, data["cryptocurrency_id"], data)
         else:
             await orm_add_cryptocurrency(session, data)
-        await message.answer(f"Криптовалюта {cryptocur_name} добавлена", reply_markup=types.ReplyKeyboardRemove())
+        bot_message = await message.answer(f"Криптовалюта {cryptocur_name} добавлена", reply_markup=types.ReplyKeyboardRemove())
+        await state.update_data(message_id=[message.message_id, bot_message.message_id])
         await state.clear()
+
+        await delete_bot_and_user_messages(data, message, bot_message)
 
     except Exception as e:
         print(e)
-        await message.answer(f"Ошибка {e}, обратитесь к @gigcomm, чтобы исправить ее!")
+        await message.answer(f"Ошибка, обратитесь к @gigcomm, чтобы исправить ее!")
         await state.clear()
 
     AddСryptocurrency.cryptocurrency_for_change = None
