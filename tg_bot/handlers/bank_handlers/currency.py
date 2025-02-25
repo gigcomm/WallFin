@@ -83,7 +83,7 @@ async def change_currency(callback_query: CallbackQuery, state: FSMContext, sess
     keyboard_message = await callback_query.message.answer(
         "В режиме изменения, если поставить точку, данное поле будет прежним,"
         "а процесс перейдет к следующему полю объекта.\nИзмените данные:",
-        reply_markup=CURRENCY_CANCEL_FSM)
+        reply_markup=CURRENCY_CANCEL_AND_BACK_FSM)
     bot_message = await callback_query.message.answer("Введите название валюты, например USD")
     await state.update_data(keyboard_message_id=[keyboard_message.message_id], message_ids=[bot_message.message_id])
 
@@ -96,7 +96,7 @@ async def add_currency(callback_query: CallbackQuery, state: FSMContext):
     await state.update_data(bank_id=bank_id)
 
     keyboard_message = await callback_query.message.answer("Заполните данные:", reply_markup=CURRENCY_CANCEL_FSM)
-    bot_message = await (callback_query.message.answer("Введите название валюты, например USD", reply_markup=CURRENCY_CANCEL_FSM))
+    bot_message = await (callback_query.message.answer("Введите название валюты, например USD"))
     await state.update_data(keyboard_message_id=[keyboard_message.message_id], message_ids=[bot_message.message_id])
 
     await state.set_state(AddCurrency.name)
@@ -127,6 +127,7 @@ async def back_handler(message: types.Message, state: FSMContext) -> None:
     data = await state.get_data()
 
     await delete_regular_messages(data, message)
+
     current_state = await state.get_state()
 
     if current_state == AddCurrency.name:
