@@ -12,9 +12,7 @@ from parsers.Bybit_API import get_price_cryptocurrency
 from parsers.parser_currency_rate import get_exchange_rate
 from parsers.tinkoff_invest_API import get_price_share, get_price_fund
 
-redis_host = os.getenv("REDIS_HOST", "redis")
-redis_port = os.getenv("REDIS_P ORT")
-redis_client = Redis(host=redis_host, port=redis_port, db=0, decode_responses=True)
+redis_client = Redis(host=os.getenv("REDIS_HOST"), port=os.getenv("REDIS_PORT"), db=0, decode_responses=True)
 
 
 async def update_cryptocurrencies():
@@ -31,8 +29,8 @@ async def update_cryptocurrencies():
                     if new_price:
                         crypto.market_price = new_price
                         updated_assets.append(crypto)
-                        redis_client.set(f"price:crypto:{crypto.name}", json.dumps({"price": new_price}))
-                        print(f"Обновления криптовалюты {crypto.name}")
+
+                        redis_client.setex(f"price:crypto:{crypto.name}", 60, json.dumps({"price": new_price}))
 
             except Exception as e:
                 print(f"Ошибка обновления криптовалюты {crypto.name}:{e}")
@@ -53,8 +51,8 @@ async def update_shares_and_funds():
                 if new_price:
                     share.price = new_price
                     updated_assets.append(share)
-                    redis_client.set(f"price:share:{share.name}", json.dumps({"price": new_price}))
-                    print(f"Обновления акции {share.name}")
+
+                    redis_client.setex(f"price:share:{share.name}", 60, json.dumps({"price": new_price}))
 
             except Exception as e:
                 print(f"Ошибка обновления акции{share.name}:{e}")
@@ -65,8 +63,8 @@ async def update_shares_and_funds():
                 if new_price:
                     fund.price = new_price
                     updated_assets.append(fund)
-                    redis_client.set(f"price:fund:{fund.name}", json.dumps({"price": new_price}))
-                    print(f"Обновления фонда {fund.name}")
+
+                    redis_client.setex(f"price:fund:{fund.name}", 60, json.dumps({"price": new_price}))
 
             except Exception as e:
                 print(f"Ошибка обновления фонда{fund.name}:{e}")
@@ -82,15 +80,15 @@ async def update_currencies():
 
         for currency in currencies:
             try:
-                new_rate = get_exchange_rate(currency.name, "RUB")
+                new_rate = get_exchange_rate(currency.name, 'RUB')
                 if new_rate:
-                    currency.price = new_rate
+                    currency.market_price = new_rate
                     updated_assets.append(currency)
-                    redis_client.set(f"price:currency:{currency.name}_'RUB'", json.dumps({"rate": new_rate}))
-                    print(f"Обновления курса {currency.from_currency}/'RUB'")
+
+                    redis_client.setex(f"price:currency:{currency.name}_RUB", 60, json.dumps({"rate": new_rate}))
 
             except Exception as e:
-                print(f"Ошибка обновления курса {currency.from_currency}/'RUB': {e}")
+                print(f"Ошибка обновления курса {currency.name}/'RUB': {e}")
 
         await session.commit()
         return updated_assets
