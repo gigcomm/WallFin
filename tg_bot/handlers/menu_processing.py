@@ -496,7 +496,7 @@ async def shares(session, level, menu_name, stockmarket_id, stockmarket_name, pa
 
     paginator = Paginator(shares_list, page=page)
 
-    if menu_name == "delete_fund":
+    if menu_name == "delete_share":
         share = paginator.get_page()[0]
         await orm_delete_share(session, share.id)
 
