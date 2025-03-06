@@ -42,6 +42,7 @@ from tg_bot.keyboards.inline import (
     get_confirm_delete_bank,
     get_confirm_delete_stockmarket,
     get_confirm_delete_cryptomarket)
+from utils.cache_utils import get_cache_price
 
 from utils.paginator import Paginator
 
@@ -291,8 +292,9 @@ async def currencies(session, level, menu_name, bank_id, bank_name, page):
         return caption, kbds
 
     currency = paginator.get_page()[0]
+    market_price = await get_cache_price("currency", currency.name, session)
     caption = (f"Баланс {currency.name}:\n"
-               f"{currency.market_price} x {currency.balance} = {currency.market_price * currency.balance}")
+               f"{market_price} x {currency.balance} = {market_price * currency.balance}")
 
     pagination_btns = pages(paginator)
 
@@ -407,7 +409,9 @@ async def cryptocurrencies(session, level, menu_name, cryptomarket_id, cryptomar
         return caption, kbds
 
     cryptocurrency = paginator.get_page()[0]
-    caption = f"Баланс {cryptocurrency.name}: {cryptocurrency.balance}"
+    market_price = await get_cache_price("crypto", cryptocurrency.name,session)
+    caption = (f"Баланс {cryptocurrency.name}: {cryptocurrency.balance}\n"
+               f"Актуальная цена актива: {market_price}")
 
     pagination_btns = pages(paginator)
 
@@ -463,7 +467,9 @@ async def funds(session, level, menu_name, stockmarket_id, stockmarket_name, pag
         return caption, kbds
 
     fund = paginator.get_page()[0]
-    caption = f"Баланс {fund.name}: {fund.quantity}"
+    market_price = await get_cache_price("fund", fund.name, session)
+    caption = (f"Баланс {fund.name}: {fund.quantity}\n"
+               f"Актуальная цена: {market_price}")
 
     pagination_btns = pages(paginator)
 
@@ -519,7 +525,9 @@ async def shares(session, level, menu_name, stockmarket_id, stockmarket_name, pa
         return caption, kbds
 
     share = paginator.get_page()[0]
-    caption = f"Баланс {share.name}: {share.quantity}"
+    market_price = await get_cache_price("share", share.name, session)
+    caption = (f"Баланс {share.name}: {share.quantity}\n"
+               f"Актуальная цена: {market_price}")
 
     pagination_btns = pages(paginator)
 
