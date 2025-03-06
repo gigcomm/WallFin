@@ -112,8 +112,8 @@ async def cancel_handler(message: types.Message, state: FSMContext) -> None:
 @account_router.message(StateFilter('*'), F.text.casefold() == "назад к предыдущему шагу")
 async def back_handler(message: types.Message, state: FSMContext) -> None:
     data = await state.get_data()
-
     await delete_regular_messages(data, message)
+
     current_state = await state.get_state()
 
     if current_state == AddAccount.name:

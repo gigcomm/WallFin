@@ -1,3 +1,5 @@
+import asyncio
+
 from aiogram.types import CallbackQuery
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -106,7 +108,6 @@ async def add_currency(callback_query: CallbackQuery, state: FSMContext):
 @currency_router.message(StateFilter('*'), F.text.casefold() == "отменить действие с валютой")
 async def cancel_handler(message: types.Message, state: FSMContext) -> None:
     data = await state.get_data()
-
     await delete_regular_messages(data, message)
 
     current_state = await state.get_state()
@@ -125,7 +126,6 @@ async def cancel_handler(message: types.Message, state: FSMContext) -> None:
 @currency_router.message(StateFilter('*'), F.text.casefold() == "назад к предыдущему шагу для валюты")
 async def back_handler(message: types.Message, state: FSMContext) -> None:
     data = await state.get_data()
-
     await delete_regular_messages(data, message)
 
     current_state = await state.get_state()
@@ -196,6 +196,7 @@ async def add_balance(message: types.Message, state: FSMContext):
         await state.update_data(balance=AddCurrency.currency_for_change.balance)
     else:
         await state.update_data(balance=message.text)
+
     bot_message = await message.answer(
         "Введите курс данной валюты или определите его автоматичекси, написав слово 'авто' в поле ввода")
     await state.update_data(message_ids=[message.message_id, bot_message.message_id])
@@ -218,7 +219,9 @@ async def add_market_price(message: types.Message, state: FSMContext, session: A
                 auto_market_price = get_exchange_rate(currency_name, 'RUB')
                 await state.update_data(market_price=auto_market_price)
                 bot_message = await message.answer(f"Курс {currency_name} к RUB автоматически установлен: {auto_market_price}")
-                await state.update_data(message_ids=[message.message_id, bot_message.message_id])
+                await asyncio.sleep(2)
+                await bot_message.delete()
+
             except Exception as e:
                 bot_message = await message.answer(f"Не удалось получить курс валюты: {e}")
                 await state.update_data(message_ids=[message.message_id, bot_message.message_id])

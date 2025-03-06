@@ -68,14 +68,14 @@ class AddDeposit(StatesGroup):
 
 
 @deposit_router.callback_query(StateFilter(None), F.data.startswith("change_deposit"))
-async def change_currency(callback_query: types.CallbackQuery, state: FSMContext, session: AsyncSession):
+async def change_deposit(callback_query: types.CallbackQuery, state: FSMContext, session: AsyncSession):
     deposit_id = int(callback_query.data.split(":")[-1])
     await state.update_data(deposit_id=deposit_id)
     deposit_for_change = await orm_get_deposit(session, deposit_id)
 
     AddDeposit.deposit_for_change = deposit_for_change
 
-    keyboard_message = await callback_query.answer("В режиме изменения, если поставить точку, данное поле будет прежним,"
+    keyboard_message = await callback_query.message.answer("В режиме изменения, если поставить точку, данное поле будет прежним,"
         "а процесс перейдет к следующему полю объекта.\nИзмените данные:",
         reply_markup=DEPOSIT_CANCEL_AND_BACK_FSM)
     bot_message = await callback_query.message.answer("Введите название вклада:")
@@ -89,7 +89,7 @@ async def add_deposit(callback_query: CallbackQuery, state: FSMContext):
     bank_id = int(callback_query.data.split(':')[-1])
     await state.update_data(bank_id=bank_id)
 
-    keyboard_message = await callback_query.message.answer("Заполните данные:", reply)
+    keyboard_message = await callback_query.message.answer("Заполните данные:")
     bot_message = await callback_query.message.answer("Введите название вклада", reply_markup=DEPOSIT_CANCEL_FSM)
     await state.update_data(keyboard_message_id=[keyboard_message.message_id], message_ids=[bot_message.message_id])
 
@@ -100,7 +100,6 @@ async def add_deposit(callback_query: CallbackQuery, state: FSMContext):
 @deposit_router.message(StateFilter('*'), F.text.casefold() == 'отменить действие с вкладом')
 async def cancel_handler(message: types.Message, state: FSMContext) -> None:
     data = await state.get_data()
-
     await delete_regular_messages(data, message)
 
     current_state = await state.get_state()
@@ -110,7 +109,7 @@ async def cancel_handler(message: types.Message, state: FSMContext) -> None:
         AddDeposit.deposit_for_change = None
     await state.clear()
     bot_message = await message.answer("Действия отменены", reply_markup=types.ReplyKeyboardRemove())
-    await state.update_data(message_id=[message.message_id, bot_message.message_id])
+    await state.update_data(message_ids=[message.message_id, bot_message.message_id])
 
     await delete_bot_and_user_messages(data, message, bot_message)
 
@@ -119,14 +118,13 @@ async def cancel_handler(message: types.Message, state: FSMContext) -> None:
 @deposit_router.message(StateFilter('*'), F.text.casefold() == "назад к предыдущему шагу для вклада")
 async def back_handler(message: types.Message, state: FSMContext) -> None:
     data = await state.get_data()
-
     await delete_regular_messages(data, message)
 
     current_state = await state.get_state()
 
     if current_state == AddDeposit.name:
         bot_message = await message.answer("Предыдущего шага нет, введите название вклада или нажмите ниже на кнопку отмены")
-        await state.update_data(message_id=[message.message_id, bot_message.message_id])
+        await state.update_data(message_ids=[message.message_id, bot_message.message_id])
         return
 
     previous = None
@@ -134,7 +132,7 @@ async def back_handler(message: types.Message, state: FSMContext) -> None:
         if step.state == current_state:
             await state.set_state(previous)
             bot_message = await message.answer(f"Вы вернулись к прошлому шагу \n {AddDeposit.texts[previous.state]}")
-            await state.update_data(message_id=[message.message_id, bot_message.message_id])
+            await state.update_data(message_ids=[message.message_id, bot_message.message_id])
             return
         previous = step
 
@@ -144,12 +142,15 @@ async def add_name(message: types.Message, state: FSMContext, session: AsyncSess
     user_tg_id = message.from_user.id
     user_id = await orm_get_user(session, user_tg_id)
 
+    data = await state.get_data()
+    await delete_regular_messages(data, message)
+
     if message.text == '.' and AddDeposit.deposit_for_change:
         await state.update_data(name=AddDeposit.deposit_for_change.name)
     else:
         if len(message.text) >= 50:
             bot_message = await message.answer("Название вклада не должно превышать 50 символов. \n Введите заново")
-            await state.update_data(message_id=[message.message_id, bot_message.message_id])
+            await state.update_data(message_ids=[message.message_id, bot_message.message_id])
             return
 
         try:
@@ -166,11 +167,11 @@ async def add_name(message: types.Message, state: FSMContext, session: AsyncSess
 
         except ValueError as e:
             bot_message = await message.answer(f"Ошибка: {e}. Пожалуйста, введите другое название:")
-            await state.update_data(message_id=[message.message_id, bot_message.message_id])
+            await state.update_data(message_ids=[message.message_id, bot_message.message_id])
             return
 
     bot_message = await message.answer(f"Введите дату начала вклада в формате ДД.ММ.ГГ.")
-    await state.update_data(message_id=[message.message_id, bot_message.message_id])
+    await state.update_data(message_ids=[message.message_id, bot_message.message_id])
 
     await state.set_state(AddDeposit.start_date)
 
@@ -182,7 +183,9 @@ async def error(message: types.Message):
 
 @deposit_router.message(AddDeposit.start_date, F.text)
 async def add_start_date(message: types.Message, state: FSMContext):
-    print(AddDeposit.deposit_for_change)
+    data = await state.get_data()
+    await delete_regular_messages(data, message)
+
     if message.text == '.' and AddDeposit.deposit_for_change:
 
         await state.update_data(start_date=AddDeposit.deposit_for_change.start_date)
@@ -192,17 +195,17 @@ async def add_start_date(message: types.Message, state: FSMContext):
             current_date = datetime.today().date()
             if user_date > current_date:
                 bot_message = await message.answer("Введенная дата не может быть в будущем. \nВведите прошедшую или сегодняшнюю дату.")
-                await state.update_data(message_id=[message.message_id, bot_message.message_id])
+                await state.update_data(message_ids=[message.message_id, bot_message.message_id])
                 return
         except ValueError:
             bot_message = await message.answer("Введенная дата неверного формата. \nВведите заново в формате ДД.ММ.ГГ.")
-            await state.update_data(message_id=[message.message_id, bot_message.message_id])
+            await state.update_data(message_ids=[message.message_id, bot_message.message_id])
             return
 
         await state.update_data(start_date=user_date)
 
     bot_message = await message.answer("Введите срок вклада числом (например 6, означает вклад сроком на 6 месяцев)")
-    await state.update_data(message_id=[message.message_id, bot_message.message_id])
+    await state.update_data(message_ids=[message.message_id, bot_message.message_id])
 
     await state.set_state(AddDeposit.deposit_term)
 
@@ -214,13 +217,16 @@ async def error(message: types.Message):
 
 @deposit_router.message(AddDeposit.deposit_term, F.text)
 async def add_deposit_term(message: types.Message, state: FSMContext):
+    data = await state.get_data()
+    await delete_regular_messages(data, message)
+
     if message.text == '.' and AddDeposit.deposit_for_change:
         await state.update_data(deposit_term=AddDeposit.deposit_for_change.deposit_term)
     else:
         await state.update_data(deposit_term=message.text)
 
     bot_message = await message.answer("Введите процентную ставку")
-    await state.update_data(message_id=[message.message_id, bot_message.message_id])
+    await state.update_data(message_ids=[message.message_id, bot_message.message_id])
 
     await state.set_state(AddDeposit.interest_rate)
 
@@ -232,13 +238,16 @@ async def error(message: types.Message):
 
 @deposit_router.message(AddDeposit.interest_rate, F.text)
 async def add_interest_rate(message: types.Message, state: FSMContext):
+    data = await state.get_data()
+    await delete_regular_messages(data, message)
+
     if message.text == '.' and AddDeposit.deposit_for_change:
         await state.update_data(interest_rate=AddDeposit.deposit_for_change.interest_rate)
     else:
         await state.update_data(interest_rate=message.text)
 
     bot_message = await message.answer("Введите сумму вклада")
-    await state.update_data(message_id=[message.message_id, bot_message.message_id])
+    await state.update_data(message_ids=[message.message_id, bot_message.message_id])
 
     await state.set_state(AddDeposit.balance)
 
@@ -250,6 +259,9 @@ async def error(message: types.Message):
 
 @deposit_router.message(AddDeposit.balance, F.text)
 async def add_balance(message: types.Message, state: FSMContext, session: AsyncSession):
+    data = await state.get_data()
+    await delete_regular_messages(data, message)
+
     if message.text == '.' and AddDeposit.deposit_for_change:
         await state.update_data(balance=AddDeposit.deposit_for_change.balance)
     else:
@@ -258,7 +270,7 @@ async def add_balance(message: types.Message, state: FSMContext, session: AsyncS
             await state.update_data(balance=dep_balance)
         except ValueError:
             bot_message = await message.answer("Некорректное значение баланса, введите число.")
-            await state.update_data(message_id=[message.message_id, bot_message.message_id])
+            await state.update_data(message_ids=[message.message_id, bot_message.message_id])
             return
 
     data = await state.get_data()
@@ -268,7 +280,7 @@ async def add_balance(message: types.Message, state: FSMContext, session: AsyncS
         else:
             await orm_add_deposit(session, data)
         bot_message = await message.answer("Вклад добавлен/изменен", reply_markup=types.ReplyKeyboardRemove())
-        await state.update_data(message_id=[message.message_id, bot_message.message_id])
+        await state.update_data(message_ids=[message.message_id, bot_message.message_id])
         await state.clear()
 
         await delete_bot_and_user_messages(data, message, bot_message)

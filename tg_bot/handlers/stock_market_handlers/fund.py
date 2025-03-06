@@ -1,3 +1,5 @@
+import asyncio
+
 from aiogram.types import CallbackQuery
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -71,7 +73,7 @@ async def change_fund(callback_query: types.CallbackQuery, state: FSMContext, se
     fund_for_change = await orm_get_fund(session, fund_id)
     AddFund.fund_for_change = fund_for_change
 
-    keyboard_message = await callback_query.answer(
+    keyboard_message = await callback_query.message.answer(
         "В режиме изменения, если поставить точку, данное поле будет прежним,"
         "а процесс перейдет к следующему полю объекта.\nИзмените данные:",
         reply_markup=FUND_CANCEL_AND_BACK_FSM)
@@ -97,7 +99,6 @@ async def add_fund(callback_query: CallbackQuery, state: FSMContext):
 @fund_router.message(StateFilter('*'), F.text.casefold() == 'отменить действие с фондом')
 async def cancel_handler(message: types.Message, state: FSMContext) -> None:
     data = await state.get_data()
-
     await delete_regular_messages(data, message)
 
     current_state = await state.get_state()
@@ -116,7 +117,6 @@ async def cancel_handler(message: types.Message, state: FSMContext) -> None:
 @fund_router.message(StateFilter('*'), F.text.casefold() == "назад к предыдущему шагу для фонда")
 async def back_handler(message: types.Message, state: FSMContext) -> None:
     data = await state.get_data()
-
     await delete_regular_messages(data, message)
 
     current_state = await state.get_state()
@@ -138,6 +138,9 @@ async def back_handler(message: types.Message, state: FSMContext) -> None:
 
 @fund_router.message(AddFund.name, F.text)
 async def add_name(message: types.Message, state: FSMContext, session: AsyncSession):
+    data = await state.get_data()
+    await delete_regular_messages(data, message)
+
     user_tg_id = message.from_user.id
     user_id = await orm_get_user(session, user_tg_id)
 
@@ -173,6 +176,9 @@ async def add_name(message: types.Message, state: FSMContext, session: AsyncSess
 
 @fund_router.message(AddFund.purchase_price, F.text)
 async def add_purchase_price(message: types.Message, state: FSMContext):
+    data = await state.get_data()
+    await delete_regular_messages(data, message)
+
     if message.text == '.' and AddFund.fund_for_change:
         await state.update_data(purchase_price=AddFund.fund_for_change.purchase_price)
     else:
@@ -186,6 +192,9 @@ async def add_purchase_price(message: types.Message, state: FSMContext):
 
 @fund_router.message(AddFund.selling_price, F.text)
 async def add_selling_price(message: types.Message, state: FSMContext):
+    data = await state.get_data()
+    await delete_regular_messages(data, message)
+
     if message.text == '.' and AddFund.fund_for_change:
         await state.update_data(selling_price=AddFund.fund_for_change.selling_price)
     else:
@@ -203,6 +212,8 @@ async def add_market_price(message: types.Message, state: FSMContext):
     data = await state.get_data()
     fund_name = data['name']
 
+    await delete_regular_messages(data, message)
+
     if message.text == '.' and AddFund.fund_for_change:
         await state.update_data(market_price=AddFund.fund_for_change.market_price)
     else:
@@ -217,7 +228,9 @@ async def add_market_price(message: types.Message, state: FSMContext):
 
                 await state.update_data(market_price=auto_market_price, currency=currency)
                 bot_message = await message.answer(f"Курс {fund_name} на финбирже автоматически установлен: {auto_market_price}")
-                await state.update_data(message_ids=[message.message_id, bot_message.message_id])
+                await asyncio.sleep(2)
+                await bot_message.delete()
+
             except Exception as e:
                 await message.answer(f"Не удалось получить цену фонда: {e}")
                 return
@@ -244,6 +257,9 @@ async def add_market_price(message: types.Message, state: FSMContext):
 
 @fund_router.message(AddFund.currency, F.text)
 async def add_currency(message: types.Message, state: FSMContext):
+    data = await state.get_data()
+    await delete_regular_messages(data, message)
+
     if message.text == '.' and AddFund.fund_for_change:
         await state.update_data(currency=AddFund.fund_for_change.currency)
     else:
@@ -267,6 +283,9 @@ async def add_currency(message: types.Message, state: FSMContext):
 
 @fund_router.message(AddFund.quantity, F.text)
 async def add_quantity(message: types.Message, state: FSMContext, session: AsyncSession):
+    data = await state.get_data()
+    await delete_regular_messages(data, message)
+
     if message.text == '.' and AddFund.fund_for_change:
         await state.update_data(quantity=AddFund.fund_for_change.quantity)
     else:
