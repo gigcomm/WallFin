@@ -21,15 +21,10 @@ async def get_instrument_currency(figi: str) -> str | None:
 
 async def get_price_share(name_share: str = ""):
     async with (AsyncClient(INVEST_TOKEN) as client):
-        response = await client.instruments.find_instrument(
-            query=name_share,
-            instrument_kind=InstrumentType.INSTRUMENT_TYPE_SHARE
-        )
-        instrument = next(
-            (instr for instr in response.instruments
-             if instr.ticker == name_share and 'BBG' in instr.figi),
-            None
-        )
+        response = await client.instruments.shares()
+
+        instrument = next((instr for instr in response.instruments if instr.ticker == name_share), None)
+
         if not instrument:
             print(f"Инструмент с тикером {name_share} не найден.")
             return None
@@ -41,7 +36,7 @@ async def get_price_share(name_share: str = ""):
             return None
 
         if instrument is not None:
-            # print(f"Название акции: {instrument.ticker}, figi:{instrument.figi}")
+            # print(f"Название акции: {instrument.ticker}, figi:{instrument.figi}, {instrument.name}")
             price_response = await client.market_data.get_last_prices(figi=[instrument.figi])
             if price_response.last_prices:
                 price_info = price_response.last_prices[0].price
