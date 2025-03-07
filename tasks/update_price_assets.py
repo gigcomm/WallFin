@@ -47,9 +47,11 @@ async def update_shares_and_funds():
 
         for share in shares:
             try:
-                new_price = await get_price_share(share.name)
+                new_price_data = await get_price_share(share.name)
+                new_price = new_price_data[0]
+
                 if new_price:
-                    share.price = new_price
+                    share.market_price = new_price
                     updated_assets.append(share)
 
                     redis_client.setex(f"price:share:{share.name}", 60, json.dumps({"price": new_price}))
@@ -59,9 +61,10 @@ async def update_shares_and_funds():
 
         for fund in funds:
             try:
-                new_price = await get_price_fund(fund.name)
+                new_price_data = await get_price_fund(fund.name)
+                new_price = new_price_data[0]
                 if new_price:
-                    fund.price = new_price
+                    fund.market_price = new_price
                     updated_assets.append(fund)
 
                     redis_client.setex(f"price:fund:{fund.name}", 60, json.dumps({"price": new_price}))
