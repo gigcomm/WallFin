@@ -24,6 +24,7 @@ from database.orm_query import (
     orm_delete_share,
     orm_get_stock_market_by_id, orm_delete_currency)
 
+from dateutil.relativedelta import relativedelta
 from tg_bot.keyboards.inline import (
     get_user_main_btns,
     get_user_assets_btns,
@@ -235,7 +236,8 @@ async def accounts(session, level, menu_name, bank_id, bank_name, page):
         return caption, kbds
 
     account = paginator.get_page()[0]
-    caption = f"Баланс счета {account.name}: {account.balance}"
+    caption = (f"{account.name}\n"
+               f"Сумма на счете: {account.balance}")
 
     pagination_btns = pages(paginator)
 
@@ -293,8 +295,9 @@ async def currencies(session, level, menu_name, bank_id, bank_name, page):
 
     currency = paginator.get_page()[0]
     market_price = await get_cache_price("currency", currency.name, session)
-    caption = (f"Баланс {currency.name}:\n"
-               f"{market_price} x {currency.balance} = {market_price * currency.balance}")
+    caption = (f"{currency.name}\n"
+               f"Кол-во: {currency.balance} {currency.name}\n"
+               f"Сумма в рублях: {market_price} x {currency.balance} = {market_price * currency.balance}")
 
     pagination_btns = pages(paginator)
 
@@ -350,10 +353,10 @@ async def deposits(session, level, menu_name, bank_id, bank_name, page):
         return caption, kbds
 
     deposit = paginator.get_page()[0]
-    caption = (f"Баланс вклада {deposit.name}:\n "
-               f"Начало вклада: {deposit.start_date} \t Конец вклада: {deposit.deposit_term}\n "
+    caption = (f"{deposit.name}:\n"
+               f"Начало вклада: {deposit.start_date} \t Конец вклада: {deposit.start_date + relativedelta(months=deposit.deposit_term)}\n"
                f"Сумма на вкладе: {deposit.balance} \t Процентная ставка: {deposit.interest_rate}\n"
-               f"Сумма в конце срока: ")
+               f"Сумма в конце срока:")
 
     pagination_btns = pages(paginator)
 
@@ -410,8 +413,11 @@ async def cryptocurrencies(session, level, menu_name, cryptomarket_id, cryptomar
 
     cryptocurrency = paginator.get_page()[0]
     market_price = await get_cache_price("crypto", cryptocurrency.name,session)
-    caption = (f"Баланс {cryptocurrency.name}: {cryptocurrency.balance}\n"
-               f"Актуальная цена актива: {market_price}")
+    caption = (f"{cryptocurrency.name}\n"
+               f"Актуальная цена: {market_price}\n"
+               f"Кол-во: {cryptocurrency.balance} {cryptocurrency.name}\n"
+               f"Сумма: {market_price*float(cryptocurrency.balance)}\n"
+               f"Изменение: ")
 
     pagination_btns = pages(paginator)
 
@@ -468,8 +474,11 @@ async def funds(session, level, menu_name, stockmarket_id, stockmarket_name, pag
 
     fund = paginator.get_page()[0]
     market_price = await get_cache_price("fund", fund.name, session)
-    caption = (f"Баланс {fund.name}: {fund.quantity}\n"
-               f"Актуальная цена: {market_price}")
+    caption = (f"{fund.name}\n"
+               f"Актуальная цена: {market_price}\n"
+               f"Кол-во: {fund.quantity}\n"
+               f"Сумма: {market_price*fund.quantity}\n"
+               f"Изменение: ")
 
     pagination_btns = pages(paginator)
 
@@ -526,8 +535,12 @@ async def shares(session, level, menu_name, stockmarket_id, stockmarket_name, pa
 
     share = paginator.get_page()[0]
     market_price = await get_cache_price("share", share.name, session)
-    caption = (f"Баланс {share.name}: {share.quantity}\n"
-               f"Актуальная цена: {market_price}")
+
+    caption = (f"{share.name}\n"
+               f"Актуальная цена: {market_price}\n"
+               f"Кол-во: {share.quantity}\n"
+               f"Сумма: {market_price*share.quantity}\n"
+               f"Изменение: ")
 
     pagination_btns = pages(paginator)
 
