@@ -25,6 +25,8 @@ from database.orm_query import (
     orm_get_stock_market_by_id, orm_delete_currency)
 
 from dateutil.relativedelta import relativedelta
+
+from finance.bank import DepositLogic
 from tg_bot.keyboards.inline import (
     get_user_main_btns,
     get_user_assets_btns,
@@ -353,10 +355,15 @@ async def deposits(session, level, menu_name, bank_id, bank_name, page):
         return caption, kbds
 
     deposit = paginator.get_page()[0]
+    deposit_logic = DepositLogic(deposit.name, deposit.start_date, deposit.deposit_term, deposit.interest_rate, deposit.balance)
+    final_amount = deposit_logic.calculating_final_amount(deposit_logic.deposit_balance, deposit_logic.deposit_term, deposit_logic.interest_rate)
+
     caption = (f"{deposit.name}:\n"
-               f"Начало вклада: {deposit.start_date} \t Конец вклада: {deposit.start_date + relativedelta(months=deposit.deposit_term)}\n"
-               f"Сумма на вкладе: {deposit.balance} \t Процентная ставка: {deposit.interest_rate}\n"
-               f"Сумма в конце срока:")
+               f"Начало вклада: {deposit.start_date}\n"
+               f"Конец вклада: {deposit.start_date + relativedelta(months=deposit.deposit_term)}\n"
+               f"Сумма на вкладе: {deposit.balance}\n"
+               f"Процентная ставка: {deposit.interest_rate}\n"
+               f"Сумма в конце срока:{final_amount:.2f}")
 
     pagination_btns = pages(paginator)
 
@@ -413,11 +420,16 @@ async def cryptocurrencies(session, level, menu_name, cryptomarket_id, cryptomar
 
     cryptocurrency = paginator.get_page()[0]
     market_price = await get_cache_price("crypto", cryptocurrency.name,session)
+    sum_now = market_price * float(cryptocurrency.balance)
+    sum_start = cryptocurrency.purchase_price * float(cryptocurrency.balance)
+    print(sum_now, sum_start)
     caption = (f"{cryptocurrency.name}\n"
                f"Актуальная цена: {market_price}\n"
                f"Кол-во: {cryptocurrency.balance} {cryptocurrency.name}\n"
-               f"Сумма: {market_price*float(cryptocurrency.balance)}\n"
-               f"Изменение: ")
+               f"Сумма: {sum_now}\n")
+
+    change = sum_now - sum_start
+    caption += f"Изменение: {'+' if change >= 0 else '-'}{abs(change)}"
 
     pagination_btns = pages(paginator)
 
