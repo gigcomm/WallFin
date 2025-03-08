@@ -70,7 +70,7 @@ class DepositLogic:
         self.__deposit_balance = deposit_balance
 
     def calculating_final_amount(self, deposit_balance, deposit_term, interest_rate):
-        final_deposit = deposit_balance * (1 + (interest_rate / 100) / 12) ** deposit_term
+        final_deposit = float(deposit_balance) * (1 + (interest_rate / 100) / 12) ** deposit_term
         return final_deposit
 
     @property
