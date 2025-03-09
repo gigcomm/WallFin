@@ -5,7 +5,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from database.orm_query import (
     orm_add_cryptocurrency,
-    orm_get_cryptocurrency_by_cryptomarket_id,
     orm_update_cryptocurrency, check_existing_cryptocurrency, orm_get_cryptocurrency, orm_get_user)
 
 from tg_bot.handlers.common_imports import *
@@ -109,7 +108,8 @@ async def back_handler(message: types.Message, state: FSMContext) -> None:
     for step in AddСryptocurrency.__all_states__:
         if step.state == current_state:
             await state.set_state(previous)
-            await message.answer(f"Вы вернулись к прошлому шагу \n {AddСryptocurrency.texts[previous.state]}")
+            bot_message = await message.answer(f"Вы вернулись к прошлому шагу \n {AddСryptocurrency.texts[previous.state]}")
+            await state.update_data(message_ids=[message.message_id, bot_message.message_id])
             return
         previous = step
 
@@ -143,7 +143,7 @@ async def add_name(message: types.Message, state: FSMContext, session: AsyncSess
                 await state.update_data(name=name.upper())
 
         except ValueError as e:
-            bot_message = await message.answer(f"Ошибка: {e}. Пожалуйста, введите другое название:")
+            bot_message = await message.answer(f"Ошибка. Пожалуйста, введите другое название:")
             await state.update_data(message_ids=[message.message_id, bot_message.message_id])
             return
 
@@ -213,6 +213,7 @@ async def add_selling_price(message: types.Message, state: FSMContext):
 async def add_market_price(message: types.Message, state: FSMContext, session: AsyncSession):
     data = await state.get_data()
     cryptocur_name = data['name'] + "USDT"
+
     await delete_regular_messages(data, message)
 
     if message.text == '.' and AddСryptocurrency.cryptocurrency_for_change:
@@ -233,7 +234,8 @@ async def add_market_price(message: types.Message, state: FSMContext, session: A
                 await bot_message.delete()
 
             except Exception as e:
-                await message.answer(f"Не удалось получить цену криптовалюты: {e}")
+                bot_message = await message.answer(f"Не удалось получить цену криптовалюты, введите цену с клавиатуры!")
+                await state.update_data(message_ids=[message.message_id, bot_message.message_id])
                 return
         else:
             try:

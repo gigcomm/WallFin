@@ -21,21 +21,6 @@ ACCOUNT_CANCEL_AND_BACK_FSM = get_keyboard(
 )
 
 
-# @account_router.callback_query(lambda callback_query: callback_query.data.startswith("accounts_"))
-# async def process_account_selection(callback_query: CallbackQuery, session: AsyncSession):
-#     bank_id = int(callback_query.data.split("_")[-1])
-#
-#     accounts = await orm_get_account(session, bank_id)
-#
-#     buttons = {account.name: str(account.id) for account in accounts}
-#     buttons["Добавить счет"] = f"add_account_{bank_id}"
-#     await callback_query.message.edit_text(
-#         "Выберете счет:",
-#         reply_markup=get_callback_btns(btns=buttons)
-#     )
-#     await callback_query.answer()
-
-
 class AddAccount(StatesGroup):
     account_id = State()
     bank_id = State()
@@ -47,15 +32,6 @@ class AddAccount(StatesGroup):
         'AddAccount:name': 'Введите название заново',
         'AddAccount:balance': 'Это последний стейт...'
     }
-
-
-# @account_router.callback_query(F.data.startswith('delete_account'))
-# async def delete_bank(callback: types.CallbackQuery, session: AsyncSession):
-#     account_id = callback.data.split("_")[-1]
-#     await orm_delete_account(session, int(account_id))
-#
-#     await callback.answer("Счет удален")
-#     await callback.message.answer("Счет удален")
 
 
 @account_router.callback_query(StateFilter(None), F.data.startswith('change_account'))
@@ -160,7 +136,7 @@ async def add_name(message: types.Message, state: FSMContext, session: AsyncSess
                 await state.update_data(name=name)
 
         except ValueError as e:
-            bot_message = await message.answer(f"Ошибка: {e}. Пожалуйста, введите другое название:")
+            bot_message = await message.answer(f"Ошибка. Пожалуйста, введите другое название:")
             await state.update_data(message_ids=[bot_message.message_id])
             return
 

@@ -22,16 +22,6 @@ CRYPTOMARKET_CANCEL_FSM = get_keyboard(
     placeholder="Нажмите на кнопку ниже, чтобы отменить добавление/изменение",
 )
 
-# @cryptomarket_router.message(F.text == 'Криптобиржи')
-# async def starting_at_cryptomarket(message: types.Message, session: AsyncSession):
-#     cryptomarkets = await orm_get_cryptomarkets(session)
-#
-#     buttons_cryptomarket = {cryptomarket.name: "cryptomarket_" + str(cryptomarket.id) for cryptomarket in cryptomarkets}
-#     await message.answer(
-#         text="Выберете криптобиржу:",
-#         reply_markup=get_callback_btns(btns=buttons_cryptomarket)
-#     )
-
 
 @cryptomarket_router.callback_query(lambda callback_query: callback_query.data.startswith("cryptomarket_"))
 async def process_cryptomarket_selection(callback_query: CallbackQuery):
@@ -55,16 +45,6 @@ class AddCryptomarket(StatesGroup):
     texts = {
         'AddCryptomarket:name': 'Введите новое название для криптобиржи',
     }
-
-
-# НАПИСАТЬ ДОПОЛНИТЕЛЬНОЕ ПОДВЕРЖДЕНИЕ НА УДАЛЕНИЕ
-# @cryptomarket_router.callback_query(F.data.startswith('delete_cryptomarket'))
-# async def delete_cryptomarket(callback: types.CallbackQuery, session: AsyncSession):
-#     cryptomarket_id = callback.data.split(":")[-1]
-#     await orm_delete_cryptomarket(session, int(cryptomarket_id))
-#
-#     await callback.answer("Криптобиржа удалена")
-#     await callback.message.answer("Криптобиржа удалена")
 
 
 @cryptomarket_router.callback_query(StateFilter(None), F.data.startswith('change_cryptomarket'))
@@ -141,7 +121,7 @@ async def add_name(message: types.Message, state: FSMContext, session: AsyncSess
                 await state.update_data(name=name)
 
         except ValueError as e:
-            bot_message = await message.answer(f"Ошибка: {e}. Пожалуйста, введите другое название:")
+            bot_message = await message.answer(f"Ошибка. Пожалуйста, введите другое название:")
             await state.update_data(message_ids=[message.message_id, bot_message.message_id])
             return
 
