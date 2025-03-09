@@ -24,16 +24,6 @@ STOCKMARKET_CANCEL_FSM = get_keyboard(
     placeholder="Нажмите на кнопку ниже, чтобы отменить добавление/изменение",
 )
 
-# @stock_market_router.message(F.text == 'Финбиржи')
-# async def starting_at_stockmarket(message: types.Message, session: AsyncSession):
-#     stockmarkets = await orm_get_stock_markets(session)
-#
-#     buttons_stockmarket = {stockmarket.name: "stockmarket_" + str(stockmarket.id) for stockmarket in stockmarkets}
-#     await message.answer(
-#         text="Выберете финбиржу:",
-#         reply_markup=get_callback_btns(btns=buttons_stockmarket)
-#     )
-
 
 @stock_market_router.callback_query(lambda callback_query: callback_query.data.startswith("stockmarket_"))
 async def process_stockmarket_selection(callback_query: CallbackQuery):
@@ -57,16 +47,6 @@ class AddStockMarket(StatesGroup):
     texts = {
         'AddStockMarket:name': 'Введите новое название для фодовой биржи',
     }
-
-
-# НАПИСАТЬ ДОПОЛНИТЕЛЬНОЕ ПОДВЕРЖДЕНИЕ НА УДАЛЕНИЕ
-# @stock_market_router.callback_query(F.data.startswith('delete_stockmarket'))
-# async def delete_stock_market(callback: types.CallbackQuery, session: AsyncSession):
-#     stock_market_id = callback.data.split(":")[-1]
-#     await orm_delete_stock_market(session, int(stock_market_id))
-#
-#     await callback.answer("Криптобиржа удалена")
-#     await callback.message.answer("Криптобиржа удалена")
 
 
 @stock_market_router.callback_query(StateFilter(None), F.data.startswith('change_stockmarket'))
@@ -112,6 +92,7 @@ async def cancel_handler(message: types.Message, state: FSMContext) -> None:
 
     await delete_bot_and_user_messages(data, message, bot_message)
 
+
 @stock_market_router.message(AddStockMarket.name, or_f(F.text))
 async def add_name(message: types.Message, state: FSMContext, session: AsyncSession):
     user_tg_id = message.from_user.id
@@ -142,7 +123,7 @@ async def add_name(message: types.Message, state: FSMContext, session: AsyncSess
                 await state.update_data(name=name)
 
         except ValueError as e:
-            bot_message = await message.answer(f"Ошибка: {e}. Пожалуйста, введите другое название:")
+            bot_message = await message.answer(f"Ошибка. Пожалуйста, введите другое название:")
             await state.update_data(message_ids=[message.message_id, bot_message.message_id])
             return
 

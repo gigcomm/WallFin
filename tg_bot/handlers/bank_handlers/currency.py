@@ -28,28 +28,6 @@ CURRENCY_CANCEL_AND_BACK_FSM = get_keyboard(
 )
 
 
-# @currency_router.callback_query(lambda callback_query: callback_query.data.startswith("currencies_"))
-# async def process_currency_action(callback_query: CallbackQuery, session: AsyncSession):
-#     bank_id = int(callback_query.data.split("_")[-1])
-#
-#     currencies = await orm_get_currency(session, bank_id)
-#     # if not currencies:
-#     #     await callback_query.message.edit_text(
-#     #         "В этом банке пока нет валют. Добавьте валюту:",
-#     #         reply_markup=get_callback_btns(btns={"Добавить валюту": f"add_currency:{bank_id}"})
-#     #     )
-#     # else:
-#     buttons = {currency.name: str(currency.id) for currency in currencies}
-#     buttons["Добавить валюту"] = f"add_currency_{bank_id}"
-#
-#     await callback_query.message.edit_text(
-#         "Выберете валюту:",
-#         reply_markup=get_callback_btns(btns=buttons)
-#     )
-#
-#     await callback_query.answer()
-
-
 class AddCurrency(StatesGroup):
     currency_id = State()
     bank_id = State()
@@ -63,15 +41,6 @@ class AddCurrency(StatesGroup):
         'AddCurrency:balance': 'Введите баланс заново',
         'AddCurrency:market_price': 'Это последний стейт...'
     }
-
-
-# @currency_router.callback_query(F.data.startswith('delete_'))
-# async def delete_currency(callback: types.CallbackQuery, session: AsyncSession):
-#     currency_id = callback.data.split("_")[-1]
-#     await orm_delete_currency(session, int(currency_id))
-#
-#     await callback.answer("Валюта удалена")
-#     await callback.message.answer("Валюта удалена")
 
 
 @currency_router.callback_query(StateFilter(None), F.data.startswith("change_currency"))
@@ -175,7 +144,7 @@ async def add_name(message: types.Message, state: FSMContext, session: AsyncSess
                 await state.update_data(name=name)
 
         except ValueError as e:
-            bot_message = await message.answer(f"Ошибка: {e}. Пожалуйста, введите другое название:")
+            bot_message = await message.answer(f"Ошибка. Пожалуйста, введите другое название:")
             await state.update_data(message_ids=[message.message_id, bot_message.message_id])
             return
 
@@ -223,7 +192,7 @@ async def add_market_price(message: types.Message, state: FSMContext, session: A
                 await bot_message.delete()
 
             except Exception as e:
-                bot_message = await message.answer(f"Не удалось получить курс валюты: {e}")
+                bot_message = await message.answer(f"Не удалось получить курс валюты. Введите курс с клавиатуры!")
                 await state.update_data(message_ids=[message.message_id, bot_message.message_id])
                 return
         else:
@@ -249,7 +218,7 @@ async def add_market_price(message: types.Message, state: FSMContext, session: A
         await delete_bot_and_user_messages(data, message, bot_message)
 
     except Exception as e:
-        await message.answer(f"Ошибка {e}, обратитесь к @gigcomm, чтобы исправить ее!")
+        await message.answer(f"Ошибка, обратитесь к @gigcomm, чтобы исправить ее!")
         await state.clear()
 
     AddCurrency.currency_for_change = None

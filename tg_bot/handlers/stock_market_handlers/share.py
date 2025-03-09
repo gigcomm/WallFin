@@ -24,21 +24,6 @@ SHARE_CANCEL_AND_BACK_FSM = get_keyboard(
 )
 
 
-# @share_router.callback_query(lambda callback_query: callback_query.data.startswith("share_"))
-# async def process_deposit_selection(callback_query: CallbackQuery, session: AsyncSession):
-#     stockmarket_id = int(callback_query.data.split("_")[-1])
-#
-#     shares = await orm_get_share(session, stockmarket_id)
-#
-#     buttons = {share.name: str(share.id) for share in shares}
-#     buttons["Добавить акцию"] = f"add_share_{stockmarket_id}"
-#     await callback_query.message.edit_text(
-#         "Выберете акцию:",
-#         reply_markup=get_callback_btns(btns=buttons)
-#     )
-#     await callback_query.answer()
-
-
 class AddShare(StatesGroup):
     stockmarket_id = State()
     name = State()
@@ -57,15 +42,6 @@ class AddShare(StatesGroup):
         'AddShare:currency': 'Введите наименование валюты для акции (например, RUB, USD, EUR):',
         'AddShare:quantity': 'Это последний стейт...',
     }
-
-
-# @share_router.callback_query(F.data.startswith('delete_share'))
-# async def delete_share(callback: types.CallbackQuery, session: AsyncSession):
-#     share_id = callback.data.split("_")[-1]
-#     await orm_delete_share(session, int(share_id))
-#
-#     await callback.answer("Криптобиржа удалена")
-#     await callback.message.answer("Криптобиржа удалена")
 
 
 @share_router.callback_query(StateFilter(None), F.data.startswith('change_share'))
@@ -167,7 +143,7 @@ async def add_name(message: types.Message, state: FSMContext, session: AsyncSess
                 await state.update_data(name=name.upper())
 
         except ValueError as e:
-            await message.answer(f"Ошибка: {e}. Пожалуйста, введите другое название:")
+            await message.answer(f"Ошибка. Пожалуйста, введите другое название:")
             return
 
     bot_message = await message.answer("Введите цену покупки акции")
@@ -234,7 +210,8 @@ async def add_market_price(message: types.Message, state: FSMContext):
                 await bot_message.delete()
 
             except Exception as e:
-                await message.answer(f"Не удалось получить цену акции: {e}")
+                bot_message = await message.answer(f"Не удалось получить цену акции, введите цену акции с клавиатуры!")
+                await state.update_data(message_ids=[message.message_id, bot_message.message_id])
                 return
         else:
             try:
@@ -249,7 +226,8 @@ async def add_market_price(message: types.Message, state: FSMContext):
                     return
 
             except ValueError:
-                await message.answer("Введите корректное числовое значение для цены акции")
+                bot_message = await message.answer("Введите корректное числовое значение для цены акции с клавиатуры!")
+                await state.update_data(message_ids=[message.message_id, bot_message.message_id])
                 return
 
     bot_message = await message.answer("Введите валюту для акции (например, RUB, USD, EUR):")

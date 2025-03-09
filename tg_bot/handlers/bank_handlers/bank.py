@@ -13,7 +13,7 @@ from tg_bot.handlers.bank_handlers.currency import currency_router
 from tg_bot.handlers.bank_handlers.deposit import deposit_router
 from tg_bot.keyboards.inline import get_callback_btns
 from tg_bot.keyboards.reply import get_keyboard
-from utils.message_utils import delete_regular_messages, delete_keyboard_messages, delete_bot_and_user_messages
+from utils.message_utils import delete_regular_messages, delete_bot_and_user_messages
 
 user_bank = {}
 
@@ -54,7 +54,7 @@ async def process_bank_selection(callback_query: CallbackQuery):
     await callback_query.answer()
 
 
-# FSM Bank
+
 class AddBank(StatesGroup):
     name = State()
 
@@ -62,28 +62,6 @@ class AddBank(StatesGroup):
     texts = {
         'AddBank:name': 'Введите новое название для банка',
     }
-
-
-# # НАПИСАТЬ ДОПОЛНИТЕЛЬНОЕ ПОДВЕРЖДЕНИЕ НА УДАЛЕНИЕ
-# @bank_router.callback_query(F.data.startswith('delete_bank'))
-# async def delete_bank(callback: types.CallbackQuery):
-#     bank_id = int(callback.data.split(":")[-1])
-#     keyboard = get_delete_confirmation_keyboard(bank_id)
-#     await callback.message.edit_text(
-#         "Вы уверены, что хотите удалить банк? Это действие необратимо.",
-#         reply_markup=keyboard
-#     )
-#     await callback.answer()
-
-# @bank_router.callback_query(MenuCallBack.filter(F.action == "confirm_delete"))
-# async def confirm_delete_bank(callback: types.CallbackQuery, session: AsyncSession, callback_data: MenuCallBack):
-#     print(callback_data.action)
-#     if callback_data.action == "confirm_delete":
-#         bank_id = int(callback_data.bank_id)
-#         await orm_delete_bank(session, bank_id)
-#
-#         await callback.answer("Банк удален")
-#         await callback.message.answer("Банк удален")
 
 
 @bank_router.callback_query(StateFilter(None), F.data.startswith('change_bank'))
@@ -161,7 +139,7 @@ async def add_name(message: types.Message, state: FSMContext, session: AsyncSess
                 await state.update_data(name=name)
 
         except ValueError as e:
-            bot_message = await message.answer(f"Ошибка: {e}. Пожалуйста, введите другое название:")
+            bot_message = await message.answer(f"Ошибка. Пожалуйста, введите другое название:")
             await state.update_data(message_ids=[message.message_id, bot_message.message_id])
             return
 

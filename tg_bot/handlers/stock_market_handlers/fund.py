@@ -22,20 +22,6 @@ FUND_CANCEL_AND_BACK_FSM = get_keyboard(
     placeholder="Используйте кнопки ниже для действий",
 )
 
-# @fund_router.callback_query(lambda callback_query: callback_query.data.startswith("fund_"))
-# async def process_account_selection(callback_query: CallbackQuery, session: AsyncSession):
-#     stockmarket_id = int(callback_query.data.split("_")[-1])
-#
-#     funds = await orm_get_fund(session, stockmarket_id)
-#
-#     buttons = {fund.name: str(fund.id) for fund in funds}
-#     buttons["Добавить фонд"] = f"add_fund_{stockmarket_id}"
-#     await callback_query.message.edit_text(
-#         "Выберете фонд:",
-#         reply_markup=get_callback_btns(btns=buttons),
-#     )
-#     await callback_query.answer()
-
 
 class AddFund(StatesGroup):
     stockmarket_id = State()
@@ -55,15 +41,6 @@ class AddFund(StatesGroup):
         'AddFund:currency': 'Введите наименование валюты для акции(например, RUB, USD, EUR):',
         'AddFund:quantity': 'Это последний стейт...',
     }
-
-
-# @fund_router.callback_query(F.data.startswith('delete_'))
-# async def delete_fund(callback: types.CallbackQuery, session: AsyncSession):
-#     fund_id = callback.data.split("_")[-1]
-#     await orm_delete_fund(session, int(fund_id))
-#
-#     await callback.answer("Бумага фонда удалена")
-#     await callback.message.answer("Бумага фонда удалена")
 
 
 @fund_router.callback_query(StateFilter(None), F.data.startswith('change_fund'))
@@ -165,7 +142,7 @@ async def add_name(message: types.Message, state: FSMContext, session: AsyncSess
                 await state.update_data(name=name.upper())
 
         except ValueError as e:
-            await message.answer(f"Ошибка: {e}. Пожалуйста, введите другое название:")
+            await message.answer(f"Ошибка. Пожалуйста, введите другое название:")
             return
 
     bot_message = await message.answer("Введите цену покупки фонда")
@@ -232,7 +209,8 @@ async def add_market_price(message: types.Message, state: FSMContext):
                 await bot_message.delete()
 
             except Exception as e:
-                await message.answer(f"Не удалось получить цену фонда: {e}")
+                bot_message = await message.answer(f"Не удалось получить цену фонда, введите цену фонда с клавиатуры!")
+                await state.update_data(message_ids=[message.message_id, bot_message.message_id])
                 return
         else:
             try:
@@ -246,7 +224,8 @@ async def add_market_price(message: types.Message, state: FSMContext):
                     await state.set_state(AddFund.currency)
                     return
             except ValueError:
-                await message.answer("Введите корректное числовое значение для цены фонда")
+                bot_message = await message.answer("Введите корректное числовое значение для цены фонда с помощью клавиатуры!")
+                await state.update_data(message_ids=[message.message_id, bot_message.message_id])
                 return
 
     bot_message = await message.answer("Введите валюту для фонда (например, RUB, USD, EUR):")
@@ -305,7 +284,7 @@ async def add_quantity(message: types.Message, state: FSMContext, session: Async
         await delete_bot_and_user_messages(data, message, bot_message)
 
     except Exception as e:
-        await message.answer(f"Ошибка {e}, обратитесь к @gigcomm, чтобы исправить ее!")
+        await message.answer(f"Ошибка, обратитесь к @gigcomm, чтобы исправить ее!")
         await state.clear()
 
     AddFund.fund_for_change = None

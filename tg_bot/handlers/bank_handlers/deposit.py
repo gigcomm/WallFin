@@ -23,21 +23,6 @@ DEPOSIT_CANCEL_AND_BACK_FSM = get_keyboard(
 )
 
 
-# @deposit_router.callback_query(lambda callback_query: callback_query.data.startswith("deposits_"))
-# async def process_deposit_selection(callback_query: CallbackQuery, session: AsyncSession):
-#     bank_id = int(callback_query.data.split("_")[-1])
-#     print("BANK_ID",bank_id)
-#     deposits = await orm_get_deposit(session, bank_id)
-#
-#     buttons = {deposit.name: str(deposit.id) for deposit in deposits}
-#     buttons["Добавить вклад"] = f"add_deposit_{bank_id}"
-#     await callback_query.message.edit_text(
-#         "Выберете вклад:",
-#         reply_markup=get_callback_btns(btns=buttons)
-#     )
-#     await callback_query.answer()
-
-
 class AddDeposit(StatesGroup):
     deposit_id = State()
     bank_id = State()
@@ -56,15 +41,6 @@ class AddDeposit(StatesGroup):
         'AddDeposit:interest_rate': 'Введите процентную ставку по вкладу заново',
         'AddDeposit:balance': 'Это последний стейт...'
     }
-
-
-# @deposit_router.callback_query(F.data.startswith("delete_deposit"))
-# async def delete_deposit(callback_query: types.CallbackQuery, session: AsyncSession):
-#     deposit_id = callback_query.data.split("_")[-1]
-#     await orm_delete_deposit(session, int(deposit_id))
-#
-#     await callback_query.answer("Вклад удален")
-#     await callback_query.message.answer("Вклад удален")
 
 
 @deposit_router.callback_query(StateFilter(None), F.data.startswith("change_deposit"))
@@ -166,7 +142,7 @@ async def add_name(message: types.Message, state: FSMContext, session: AsyncSess
                 await state.update_data(name=name)
 
         except ValueError as e:
-            bot_message = await message.answer(f"Ошибка: {e}. Пожалуйста, введите другое название:")
+            bot_message = await message.answer(f"Ошибка. Пожалуйста, введите другое название:")
             await state.update_data(message_ids=[message.message_id, bot_message.message_id])
             return
 
