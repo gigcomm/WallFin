@@ -272,8 +272,8 @@ async def orm_get_currency_all(session: AsyncSession):
     return result.scalars().all()
 
 
-async def orm_get_currency_first(session: AsyncSession):
-    result = await session.execute(select(Currency))
+async def orm_get_currency_name(session: AsyncSession, name: str):
+    result = await session.execute(select(Currency).where(Currency.name==name))
     return result.scalars().first()
 
 
@@ -378,8 +378,8 @@ async def orm_get_share_all(session: AsyncSession):
     return result.scalars().all()
 
 
-async def orm_get_share_first(session: AsyncSession):
-    result = await session.execute(select(Share))
+async def orm_get_share_name(session: AsyncSession, name: str):
+    result = await session.execute(select(Share).where(Share.name==name))
     return result.scalars().first()
 
 
@@ -438,8 +438,8 @@ async def orm_get_fund_all(session: AsyncSession):
     return result.scalars().all()
 
 
-async def orm_get_fund_first(session: AsyncSession):
-    result = await session.execute(select(Fund))
+async def orm_get_fund_name(session: AsyncSession, name: str):
+    result = await session.execute(select(Fund).where(Fund.name == name))
     return result.scalars().first()
 
 
@@ -497,8 +497,8 @@ async def orm_get_cryptocurrency_all(session: AsyncSession):
     return result.scalars().all()
 
 
-async def orm_get_cryptocurrency_first(session: AsyncSession):
-    result = await session.execute(select(Cryptocurrency))
+async def orm_get_cryptocurrency_name(session: AsyncSession, name: str):
+    result = await session.execute(select(Cryptocurrency).where(Cryptocurrency.name == name))
     return result.scalars().first()
 
 
