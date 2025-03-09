@@ -26,11 +26,13 @@ async def update_cryptocurrencies():
                 if crypto_name != "USDT":
                     crypto_name += "USDT"
                     new_price = get_price_cryptocurrency(crypto_name)
-                    if new_price:
+                    if new_price is not None:
                         crypto.market_price = new_price
                         updated_assets.append(crypto)
 
                         redis_client.setex(f"price:crypto:{crypto.name}", 60, json.dumps({"price": new_price}))
+                    else:
+                        print(f"⚠️ Цена для {crypto.name} не найдена, не обновляем market_price")
 
             except Exception as e:
                 print(f"Ошибка обновления криптовалюты {crypto.name}:{e}")
