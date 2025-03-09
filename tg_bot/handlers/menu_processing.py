@@ -238,7 +238,7 @@ async def accounts(session, level, menu_name, bank_id, bank_name, page):
         return caption, kbds
 
     account = paginator.get_page()[0]
-    caption = (f"{account.name}\n"
+    caption = (f"{account.name}\n\n"
                f"Сумма на счете: {account.balance}")
 
     pagination_btns = pages(paginator)
@@ -297,9 +297,9 @@ async def currencies(session, level, menu_name, bank_id, bank_name, page):
 
     currency = paginator.get_page()[0]
     market_price = await get_cache_price("currency", currency.name, session)
-    caption = (f"{currency.name}\n"
+    caption = (f"{currency.name}\n\n"
                f"Кол-во: {currency.balance} {currency.name}\n"
-               f"Сумма в рублях: {market_price} x {currency.balance} = {market_price * currency.balance}")
+               f"Сумма в рублях: {market_price} x {float(currency.balance)} = {market_price * currency.balance}")
 
     pagination_btns = pages(paginator)
 
@@ -358,7 +358,7 @@ async def deposits(session, level, menu_name, bank_id, bank_name, page):
     deposit_logic = DepositLogic(deposit.name, deposit.start_date, deposit.deposit_term, deposit.interest_rate, deposit.balance)
     final_amount = deposit_logic.calculating_final_amount(deposit_logic.deposit_balance, deposit_logic.deposit_term, deposit_logic.interest_rate)
 
-    caption = (f"{deposit.name}:\n"
+    caption = (f"{deposit.name}\n\n"
                f"Начало вклада: {deposit.start_date}\n"
                f"Конец вклада: {deposit.start_date + relativedelta(months=deposit.deposit_term)}\n"
                f"Сумма на вкладе: {deposit.balance}\n"
@@ -419,17 +419,19 @@ async def cryptocurrencies(session, level, menu_name, cryptomarket_id, cryptomar
         return caption, kbds
 
     cryptocurrency = paginator.get_page()[0]
-    market_price = await get_cache_price("crypto", cryptocurrency.name,session)
-    sum_now = market_price * float(cryptocurrency.balance)
-    sum_start = cryptocurrency.purchase_price * float(cryptocurrency.balance)
-    print(sum_now, sum_start)
-    caption = (f"{cryptocurrency.name}\n"
-               f"Актуальная цена: {market_price}\n"
-               f"Кол-во: {cryptocurrency.balance} {cryptocurrency.name}\n"
-               f"Сумма: {sum_now}\n")
+    market_price = await get_cache_price("crypto", cryptocurrency.name, session)
+    print(market_price)
+    current_value = float(market_price) * float(cryptocurrency.balance)
+    initial_value = cryptocurrency.purchase_price * float(cryptocurrency.balance)
 
-    change = sum_now - sum_start
-    caption += f"Изменение: {'+' if change >= 0 else '-'}{abs(change)}"
+    caption = (f"{cryptocurrency.name}\n\n"
+               f"Цена покупки: {cryptocurrency.purchase_price} USD\n"
+               f"Актуальная цена: {market_price} USD\n"
+               f"Кол-во: {cryptocurrency.balance} {cryptocurrency.name}\n"
+               f"Сумма: {current_value:.2f} USD\n")
+
+    change = current_value - initial_value
+    caption += f"Доход: {'+' if change >= 0 else '-'}{abs(change):.2f} USD"
 
     pagination_btns = pages(paginator)
 
@@ -486,11 +488,17 @@ async def funds(session, level, menu_name, stockmarket_id, stockmarket_name, pag
 
     fund = paginator.get_page()[0]
     market_price = await get_cache_price("fund", fund.name, session)
-    caption = (f"{fund.name}\n"
-               f"Актуальная цена: {market_price}\n"
+    current_value = float(market_price) * float(fund.quantity)
+    initial_value = fund.purchase_price * float(fund.quantity)
+
+    caption = (f"{fund.name}\n\n"
+               f"Цена покупки: {fund.purchase_price} {fund.currency}\n"
+               f"Актуальная цена: {market_price} {fund.currency}\n"
                f"Кол-во: {fund.quantity}\n"
-               f"Сумма: {market_price*fund.quantity}\n"
-               f"Изменение: ")
+               f"Сумма: {current_value:.2f} {fund.currency}\n ")
+
+    change = current_value - initial_value
+    caption += f"Доход: {'+' if change >= 0 else '-'}{abs(change):.2f} {fund.currency}"
 
     pagination_btns = pages(paginator)
 
@@ -547,12 +555,18 @@ async def shares(session, level, menu_name, stockmarket_id, stockmarket_name, pa
 
     share = paginator.get_page()[0]
     market_price = await get_cache_price("share", share.name, session)
+    current_value = float(market_price) * float(share.quantity)
+    initial_value = share.purchase_price * float(share.quantity)
 
-    caption = (f"{share.name}\n"
-               f"Актуальная цена: {market_price}\n"
+    caption = (f"{share.name}\n\n"
+               f"Цена покупки: {share.purchase_price} {share.currency}\n"
+               f"Актуальная цена: {market_price} {share.currency}\n"
                f"Кол-во: {share.quantity}\n"
-               f"Сумма: {market_price*share.quantity}\n"
-               f"Изменение: ")
+               f"Сумма: {current_value:.2f} {share.currency}\n")
+
+    change = current_value - initial_value
+    caption += f"Доход: {'+' if change >= 0 else '-'}{abs(change):.2f} {share.currency}"
+
 
     pagination_btns = pages(paginator)
 
