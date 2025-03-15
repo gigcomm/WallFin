@@ -3,6 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from database.orm_query import orm_add_account, orm_update_account, orm_get_account, check_existing_account, \
     orm_get_user
+from tg_bot.logger import logger
 from tg_bot.handlers.common_imports import *
 from tg_bot.keyboards.reply import get_keyboard
 from utils.message_utils import delete_regular_messages, delete_bot_and_user_messages
@@ -36,6 +37,7 @@ class AddAccount(StatesGroup):
 
 @account_router.callback_query(StateFilter(None), F.data.startswith('change_account'))
 async def change_account(callback_query: CallbackQuery, state: FSMContext, session: AsyncSession):
+    logger.info(f"Пользователь {callback_query.from_user.id} начал изменение счета.")
     account_id = int(callback_query.data.split(":")[-1])
     await state.update_data(account_id=account_id)
     account_for_change = await orm_get_account(session, account_id)
@@ -55,6 +57,7 @@ async def change_account(callback_query: CallbackQuery, state: FSMContext, sessi
 
 @account_router.callback_query(StateFilter(None), F.data.startswith('add_account'))
 async def add_account(callback_query: CallbackQuery, state: FSMContext):
+    logger.info(f"Пользователь {callback_query.from_user.id} начал добавление счета.")
     bank_id = int(callback_query.data.split(':')[-1])
     await state.update_data(bank_id=bank_id, message_ids=[], keyboard_message_id=[])
 
@@ -68,6 +71,7 @@ async def add_account(callback_query: CallbackQuery, state: FSMContext):
 @account_router.message(StateFilter('*'), Command('Отменить действие со счетом'))
 @account_router.message(StateFilter('*'), F.text.casefold() == 'отменить действие со счетом')
 async def cancel_handler(message: types.Message, state: FSMContext) -> None:
+    logger.info(f"Пользователь {message.from_user.id} отменил действие со счетом.")
     data = await state.get_data()
     await delete_regular_messages(data, message)
 
@@ -87,6 +91,7 @@ async def cancel_handler(message: types.Message, state: FSMContext) -> None:
 @account_router.message(StateFilter('*'), Command('Назад к предыдущему шагу'))
 @account_router.message(StateFilter('*'), F.text.casefold() == "назад к предыдущему шагу")
 async def back_handler(message: types.Message, state: FSMContext) -> None:
+    logger.info(f"Пользователь {message.from_user.id} вернулся к предыдущему шагу для изменения валюты.")
     data = await state.get_data()
     await delete_regular_messages(data, message)
 
@@ -110,6 +115,7 @@ async def back_handler(message: types.Message, state: FSMContext) -> None:
 
 @account_router.message(AddAccount.name, F.text)
 async def add_name(message: types.Message, state: FSMContext, session: AsyncSession):
+    logger.info(f"Пользователь {message.from_user.id} вводит название счета.")
     user_tg_id = message.from_user.id
     user_id = await orm_get_user(session, user_tg_id)
 
@@ -136,7 +142,8 @@ async def add_name(message: types.Message, state: FSMContext, session: AsyncSess
                 await state.update_data(name=name)
 
         except ValueError as e:
-            bot_message = await message.answer(f"Ошибка. Пожалуйста, введите другое название:")
+            logger.error(f"Ошибка при вводе названия счета: {e}")
+            bot_message = await message.answer("Ошибка. Пожалуйста, введите другое название:")
             await state.update_data(message_ids=[bot_message.message_id])
             return
 
@@ -149,6 +156,7 @@ async def add_name(message: types.Message, state: FSMContext, session: AsyncSess
 
 @account_router.message(AddAccount.balance, F.text)
 async def add_balance(message: types.Message, state: FSMContext, session: AsyncSession):
+    logger.info(f"Пользователь {message.from_user.id} вводит баланс счета.")
     data = await state.get_data()
     await delete_regular_messages(data, message)
 
@@ -159,6 +167,7 @@ async def add_balance(message: types.Message, state: FSMContext, session: AsyncS
             balance = float(message.text)
             await state.update_data(balance=balance)
         except ValueError:
+            logger.warning(f"Некорректное значение баланса: {message.text}")
             bot_message = await message.answer("Некорректное значение баланса, введите число.")
             await state.update_data(message_ids=[message.message_id, bot_message.message_id])
             return
@@ -171,14 +180,15 @@ async def add_balance(message: types.Message, state: FSMContext, session: AsyncS
             await orm_add_account(session, data)
 
         bot_message = await message.answer("Счет добавлен", reply_markup=types.ReplyKeyboardRemove())
+        logger.info("Счет успешно добавлен.")
         await state.update_data(message_ids=[message.message_id, bot_message.message_id])
         await state.clear()
 
         await delete_bot_and_user_messages(data, message, bot_message)
 
     except Exception as e:
-        print(f"Ошибка {e}")
-        await message.answer(f"Ошибка, обратитесь к @gigcomm, чтобы исправить ее!")
+        logger.error(f"Ошибка при добавлении счета: {e}")
+        await message.answer("Ошибка, обратитесь к @gigcomm, чтобы исправить ее!")
         await state.clear()
 
     AddAccount.account_for_change = None
