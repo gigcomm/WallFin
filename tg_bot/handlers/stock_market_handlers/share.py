@@ -8,6 +8,7 @@ from database.orm_query import orm_add_share, orm_delete_share, orm_get_share, o
 from tg_bot.handlers.common_imports import *
 from tg_bot.keyboards.reply import get_keyboard
 from parsers.tinkoff_invest_API import get_price_share
+from tg_bot.logger import logger
 from utils.message_utils import delete_regular_messages, delete_bot_and_user_messages
 
 share_router = Router()
@@ -46,6 +47,7 @@ class AddShare(StatesGroup):
 
 @share_router.callback_query(StateFilter(None), F.data.startswith('change_share'))
 async def change_share(callback_query: CallbackQuery, state: FSMContext, session: AsyncSession):
+    logger.info(f"Пользователь {callback_query.from_user.id} начал изменение акции.")
     share_id = int(callback_query.data.split(":")[-1])
     await state.update_data(share_id=share_id)
     share_for_change = await orm_get_share(session, share_id)
@@ -63,6 +65,7 @@ async def change_share(callback_query: CallbackQuery, state: FSMContext, session
 
 @share_router.callback_query(StateFilter(None), F.data.startswith('add_share'))
 async def add_cryptomarket(callback_query: CallbackQuery, state: FSMContext):
+    logger.info(f"Пользователь {callback_query.from_user.id} начал добавление акции.")
     stockmarket_id = int(callback_query.data.split(":")[-1])
     await state.update_data(stockmarket_id=stockmarket_id)
 
@@ -76,6 +79,7 @@ async def add_cryptomarket(callback_query: CallbackQuery, state: FSMContext):
 @share_router.message(StateFilter('*'), Command('Отменить действие с акцией'))
 @share_router.message(StateFilter('*'), F.text.casefold() == 'отменить действие с акцией')
 async def cancel_handler(message: types.Message, state: FSMContext) -> None:
+    logger.info(f"Пользователь {message.from_user.id} отменил действие с акцией.")
     data = await state.get_data()
     await delete_regular_messages(data, message)
 
@@ -94,6 +98,7 @@ async def cancel_handler(message: types.Message, state: FSMContext) -> None:
 @share_router.message(StateFilter('*'), Command('Назад к предыдущему шагу для акции'))
 @share_router.message(StateFilter('*'), F.text.casefold() == "назад к предыдущему шагу для акции")
 async def back_handler(message: types.Message, state: FSMContext) -> None:
+    logger.info(f"Пользователь {message.from_user.id} вернулся к предыдущему шагу для изменения акции.")
     data = await state.get_data()
     await delete_regular_messages(data, message)
 
@@ -116,6 +121,7 @@ async def back_handler(message: types.Message, state: FSMContext) -> None:
 
 @share_router.message(AddShare.name, F.text)
 async def add_name(message: types.Message, state: FSMContext, session: AsyncSession):
+    logger.info(f"Пользователь {message.from_user.id} вводит название акции.")
     user_tg_id = message.from_user.id
     user_id = await orm_get_user(session, user_tg_id)
 
@@ -143,6 +149,7 @@ async def add_name(message: types.Message, state: FSMContext, session: AsyncSess
                 await state.update_data(name=name.upper())
 
         except ValueError as e:
+            logger.error(f"Ошибка при вводе названия акции: {e}")
             await message.answer(f"Ошибка. Пожалуйста, введите другое название:")
             return
 
@@ -154,39 +161,54 @@ async def add_name(message: types.Message, state: FSMContext, session: AsyncSess
 
 @share_router.message(AddShare.purchase_price, F.text)
 async def add_purchase_price(message: types.Message, state: FSMContext):
+    logger.info(f"Пользователь {message.from_user.id} вводит цену покупки акции.")
     data = await state.get_data()
     await delete_regular_messages(data, message)
 
-    if message.text == '.' and AddShare.share_for_change:
-        await state.update_data(purchase_price=AddShare.share_for_change.purchase_price)
-    else:
-        await state.update_data(purchase_price=message.text)
+    try:
+        if message.text == '.' and AddShare.share_for_change:
+            await state.update_data(purchase_price=AddShare.share_for_change.purchase_price)
+        else:
+            await state.update_data(purchase_price=message.text)
 
-    bot_message = await message.answer("Введите цену продажи акции")
-    await state.update_data(message_ids=[message.message_id, bot_message.message_id])
+        bot_message = await message.answer("Введите цену продажи акции")
+        await state.update_data(message_ids=[message.message_id, bot_message.message_id])
+    except Exception as e:
+        logger.error(f"Ошибка при обновлении цены покупки акции: {e}")
+        bot_message = await message.answer("Введите корректное числовое значение для цены покупки акции.")
+        await state.update_data(message_ids=[message.message_id, bot_message.message_id])
+        return
 
     await state.set_state(AddShare.selling_price)
 
 
 @share_router.message(AddShare.selling_price, F.text)
 async def add_selling_price(message: types.Message, state: FSMContext):
+    logger.info(f"Пользователь {message.from_user.id} вводит цену продажи акции.")
     data = await state.get_data()
     await delete_regular_messages(data, message)
 
-    if message.text == '.' and AddShare.share_for_change:
-        await state.update_data(selling_price=AddShare.share_for_change.selling_price)
-    else:
-        await state.update_data(selling_price=message.text)
+    try:
+        if message.text == '.' and AddShare.share_for_change:
+            await state.update_data(selling_price=AddShare.share_for_change.selling_price)
+        else:
+            await state.update_data(selling_price=message.text)
 
-    bot_message = await message.answer(
-        "Введите цену акции на фондовой бирже или напишите слово 'авто' для автоматического определения текущей цены акции")
-    await state.update_data(message_ids=[message.message_id, bot_message.message_id])
+        bot_message = await message.answer(
+            "Введите цену акции на фондовой бирже или напишите слово 'авто' для автоматического определения текущей цены акции")
+        await state.update_data(message_ids=[message.message_id, bot_message.message_id])
+    except Exception as e:
+        logger.error(f"Ошибка при обновлении цены продажи акции: {e}")
+        bot_message = await message.answer("Введите корректное числовое значение для цены продажи акции.")
+        await state.update_data(message_ids=[message.message_id, bot_message.message_id])
+        return
 
     await state.set_state(AddShare.market_price)
 
 
 @share_router.message(AddShare.market_price, F.text)
 async def add_market_price(message: types.Message, state: FSMContext):
+    logger.info(f"Пользователь {message.from_user.id} вводит/получает рыночную цену акции.")
     data = await state.get_data()
     share_name = data['name']
 
@@ -206,11 +228,20 @@ async def add_market_price(message: types.Message, state: FSMContext):
 
                 await state.update_data(market_price=auto_market_price, currency=currency)
                 bot_message = await message.answer(f"Курс {share_name} на финбирже автоматически установлен: {auto_market_price}")
+
                 await asyncio.sleep(2)
                 await bot_message.delete()
 
+            except (ConnectionError, TimeoutError) as e:
+                logger.error(f"Ошибка подключения при получении рыночной цены акции {share_name} для пользователя {message.from_user.id}: {e}")
+                bot_message = await message.answer("Ошибка подключения к сервису получения цены акции. Введите цену с клавиатуры!")
+                await state.update_data(message_ids=[message.message_id, bot_message.message_id])
+                return
+
             except Exception as e:
-                bot_message = await message.answer(f"Не удалось получить цену акции, введите цену акции с клавиатуры!")
+                logger.exception(
+                    f"Ошибка при определении рыночной цены акции {share_name} для пользователя {message.from_user.id}: {e}")
+                bot_message = await message.answer("Не удалось получить цену акции, введите цену акции с клавиатуры!")
                 await state.update_data(message_ids=[message.message_id, bot_message.message_id])
                 return
         else:
@@ -226,6 +257,7 @@ async def add_market_price(message: types.Message, state: FSMContext):
                     return
 
             except ValueError:
+                logger.warning(f"Некорректное значение рыночной цены акции: {message.text}")
                 bot_message = await message.answer("Введите корректное числовое значение для цены акции с клавиатуры!")
                 await state.update_data(message_ids=[message.message_id, bot_message.message_id])
                 return
@@ -237,32 +269,40 @@ async def add_market_price(message: types.Message, state: FSMContext):
 
 @share_router.message(AddShare.currency, F.text)
 async def add_currency(message: types.Message, state: FSMContext):
+    logger.info(f"Пользователь {message.from_user.id} вводит валюту акции.")
     data = await state.get_data()
     await delete_regular_messages(data, message)
 
-    if message.text == '.' and AddShare.share_for_change:
-        await state.update_data(currency=AddShare.share_for_change.currency)
-    else:
-        currency = message.text.upper().strip()
+    try:
+        if message.text == '.' and AddShare.share_for_change:
+            await state.update_data(currency=AddShare.share_for_change.currency)
+        else:
+            currency = message.text.upper().strip()
 
-        valid_currencies = ['RUB', 'USD', 'EUR']
-        if currency not in valid_currencies:
-            bot_message = await message.answer("Введите корректный код валюты (например, RUB, USD, EUR):")
-            await state.update_data(message_ids=[message.message_id, bot_message.message_id])
-            return
+            valid_currencies = ['RUB', 'USD', 'EUR']
+            if currency not in valid_currencies:
+                bot_message = await message.answer("Введите корректный код валюты (например, RUB, USD, EUR):")
+                await state.update_data(message_ids=[message.message_id, bot_message.message_id])
+                return
 
-        await state.update_data(currency=currency)
-        updated_data = await state.get_data()
-        print(f"Обновленные данные после ввода валюты: {updated_data}")
+            await state.update_data(currency=currency)
+            updated_data = await state.get_data()
+            print(f"Обновленные данные после ввода валюты: {updated_data}")
 
-    bot_message = await message.answer("Введите количество бумаг акции:")
-    await state.update_data(message_ids=[message.message_id, bot_message.message_id])
+        bot_message = await message.answer("Введите количество бумаг акции:")
+        await state.update_data(message_ids=[message.message_id, bot_message.message_id])
+    except Exception as e:
+        logger.error(f"Ошибка при обновлении валюты акции: {e}")
+        bot_message = await message.answer("Введите корректное значение для валюты (USD, EUR, RUB) акции.")
+        await state.update_data(message_ids=[message.message_id, bot_message.message_id])
+        return
 
     await state.set_state(AddShare.quantity)
 
 
 @share_router.message(AddShare.quantity, F.text)
 async def add_quantity(message: types.Message, state: FSMContext, session: AsyncSession):
+    logger.info(f"Пользователь {message.from_user.id} вводит количество бумаг акций.")
     data = await state.get_data()
     await delete_regular_messages(data, message)
 
@@ -284,8 +324,8 @@ async def add_quantity(message: types.Message, state: FSMContext, session: Async
         await delete_bot_and_user_messages(data, message, bot_message)
 
     except Exception as e:
-        print(e)
-        await message.answer(f"Ошибка, обратитесь к @gigcomm, чтобы исправить ее!")
+        logger.error(f"Ошибка при добавлении акции: {e}")
+        await message.answer("Ошибка, обратитесь к @gigcomm, чтобы исправить ее!")
         await state.clear()
 
     AddShare.share_for_change = None

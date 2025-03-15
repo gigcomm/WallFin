@@ -10,6 +10,7 @@ from database.orm_query import (
 from tg_bot.handlers.common_imports import *
 from parsers.Bybit_API import get_price_cryptocurrency
 from tg_bot.keyboards.reply import get_keyboard
+from tg_bot.logger import logger
 from utils.message_utils import delete_regular_messages, delete_bot_and_user_messages
 
 cryptocurrency_router = Router()
@@ -46,6 +47,7 @@ class AddСryptocurrency(StatesGroup):
 
 @cryptocurrency_router.callback_query(StateFilter(None), F.data.startswith("change_cryptocurrency"))
 async def change_cryptocurrency(callback_query: CallbackQuery, state: FSMContext, session: AsyncSession):
+    logger.info(f"Пользователь {callback_query.from_user.id} начал изменение криптовалюты.")
     cryptocurrency_id = int(callback_query.data.split(":")[-1])
     await state.update_data(cryptocurrency_id=cryptocurrency_id)
     cryptocurrency_for_change = await orm_get_cryptocurrency(session, cryptocurrency_id)
@@ -63,6 +65,7 @@ async def change_cryptocurrency(callback_query: CallbackQuery, state: FSMContext
 
 @cryptocurrency_router.callback_query(StateFilter(None), F.data.startswith("add_cryptocurrency"))
 async def add_cryptomarket(callback_query: CallbackQuery, state: FSMContext):
+    logger.info(f"Пользователь {callback_query.from_user.id} начал добавление криптовалюты.")
     cryptomarket_id = int(callback_query.data.split(":")[-1])
     await state.update_data(cryptomarket_id=cryptomarket_id)
 
@@ -76,6 +79,7 @@ async def add_cryptomarket(callback_query: CallbackQuery, state: FSMContext):
 @cryptocurrency_router.message(StateFilter('*'), Command("Отменить действие с криптовалютой"))
 @cryptocurrency_router.message(StateFilter('*'), F.text.casefold() == "отменить действие с криптовалютой")
 async def cancel_handler(message: types.Message, state: FSMContext) -> None:
+    logger.info(f"Пользователь {message.from_user.id} отменил действие с криптовалюты.")
     data = await state.get_data()
     await delete_regular_messages(data, message)
 
@@ -94,6 +98,7 @@ async def cancel_handler(message: types.Message, state: FSMContext) -> None:
 @cryptocurrency_router.message(StateFilter('*'), Command("Назад к предыдущему шагу для криптовалюты"))
 @cryptocurrency_router.message(StateFilter('*'), F.text.casefold() == "назад к предыдущему шагу для криптовалюты")
 async def back_handler(message: types.Message, state: FSMContext) -> None:
+    logger.info(f"Пользователь {message.from_user.id} вернулся к предыдущему шагу для изменения криптовалюты.")
     data = await state.get_data()
     await delete_regular_messages(data, message)
 
@@ -116,6 +121,7 @@ async def back_handler(message: types.Message, state: FSMContext) -> None:
 
 @cryptocurrency_router.message(AddСryptocurrency.name, F.text)
 async def add_name(message: types.Message, state: FSMContext, session: AsyncSession):
+    logger.info(f"Пользователь {message.from_user.id} вводит название криптовалюты.")
     user_tg_id = message.from_user.id
     user_id = await orm_get_user(session, user_tg_id)
 
@@ -143,7 +149,8 @@ async def add_name(message: types.Message, state: FSMContext, session: AsyncSess
                 await state.update_data(name=name.upper())
 
         except ValueError as e:
-            bot_message = await message.answer(f"Ошибка. Пожалуйста, введите другое название:")
+            logger.error(f"Ошибка при вводе названия криптовалюты: {e}")
+            bot_message = await message.answer("Ошибка. Пожалуйста, введите другое название:")
             await state.update_data(message_ids=[message.message_id, bot_message.message_id])
             return
 
@@ -155,6 +162,7 @@ async def add_name(message: types.Message, state: FSMContext, session: AsyncSess
 
 @cryptocurrency_router.message(AddСryptocurrency.balance, F.text)
 async def add_balance(message: types.Message, state: FSMContext):
+    logger.info(f"Пользователь {message.from_user.id} вводит баланс криптовалюты.")
     data = await state.get_data()
     await delete_regular_messages(data, message)
 
@@ -165,6 +173,7 @@ async def add_balance(message: types.Message, state: FSMContext):
             cryptocurrency_balance = float(message.text)
             await state.update_data(balance=cryptocurrency_balance)
         except ValueError:
+            logger.warning(f"Некорректное значение баланса: {message.text}")
             bot_message = await message.answer("Некорректное значение баланса, введите число.")
             await state.update_data(message_ids=[message.message_id, bot_message.message_id])
             return
@@ -177,40 +186,55 @@ async def add_balance(message: types.Message, state: FSMContext):
 
 @cryptocurrency_router.message(AddСryptocurrency.purchase_price, F.text)
 async def add_purchase_price(message: types.Message, state: FSMContext):
+    logger.info(f"Пользователь {message.from_user.id} вводит цену покупки криптовалюты.")
     data = await state.get_data()
     await delete_regular_messages(data, message)
 
-    if message.text == '.' and AddСryptocurrency.cryptocurrency_for_change:
-        await state.update_data(purchase_price=AddСryptocurrency.cryptocurrency_for_change.purchase_price)
-    else:
-        await state.update_data(purchase_price=message.text)
+    try:
+        if message.text == '.' and AddСryptocurrency.cryptocurrency_for_change:
+            await state.update_data(purchase_price=AddСryptocurrency.cryptocurrency_for_change.purchase_price)
+        else:
+            await state.update_data(purchase_price=message.text)
 
-    bot_message = await message.answer("Введите цену продажи криптовалюты")
-    await state.update_data(message_ids=[message.message_id, bot_message.message_id])
+        bot_message = await message.answer("Введите цену продажи криптовалюты")
+        await state.update_data(message_ids=[message.message_id, bot_message.message_id])
+    except Exception as e:
+        logger.error(f"Ошибка при обновлении цены покупки криптовалюты: {e}")
+        bot_message = await message.answer("Введите корректное числовое значение для цены покупки криптовалюты.")
+        await state.update_data(message_ids=[message.message_id, bot_message.message_id])
+        return
 
     await state.set_state(AddСryptocurrency.selling_price)
 
 
 @cryptocurrency_router.message(AddСryptocurrency.selling_price, F.text)
 async def add_selling_price(message: types.Message, state: FSMContext):
+    logger.info(f"Пользователь {message.from_user.id} вводит цену продажи криптовалюты.")
     data = await state.get_data()
     await delete_regular_messages(data, message)
+    try:
+        if message.text == '.' and AddСryptocurrency.cryptocurrency_for_change:
+            await state.update_data(selling_price=AddСryptocurrency.cryptocurrency_for_change.selling_price)
+        else:
+            await state.update_data(selling_price=message.text)
 
-    if message.text == '.' and AddСryptocurrency.cryptocurrency_for_change:
-        await state.update_data(selling_price=AddСryptocurrency.cryptocurrency_for_change.selling_price)
-    else:
-        await state.update_data(selling_price=message.text)
+        bot_message = await message.answer(
+            "Введите цену криптовалюты на криптобирже или введите слово 'авто' для автоматического определения "
+            "текущей цены криптовалюты")
+        await state.update_data(message_ids=[message.message_id, bot_message.message_id])
 
-    bot_message = await message.answer(
-        "Введите цену криптовалюты на криптобирже или введите слово 'авто' для автоматического определения "
-        "текущей цены криптовалюты")
-    await state.update_data(message_ids=[message.message_id, bot_message.message_id])
+    except Exception as e:
+        logger.error(f"Ошибка при обновлении цены продажи криптовалюты: {e}")
+        bot_message = await message.answer("Введите корректное числовое значение для цены продажи криптовалюты.")
+        await state.update_data(message_ids=[message.message_id, bot_message.message_id])
+        return
 
     await state.set_state(AddСryptocurrency.market_price)
 
 
 @cryptocurrency_router.message(AddСryptocurrency.market_price, F.text)
 async def add_market_price(message: types.Message, state: FSMContext, session: AsyncSession):
+    logger.info(f"Пользователь {message.from_user.id} вводит/получает рыночную цену криптовалюты.")
     data = await state.get_data()
     cryptocur_name = data['name'] + "USDT"
 
@@ -230,11 +254,19 @@ async def add_market_price(message: types.Message, state: FSMContext, session: A
 
                 await state.update_data(market_price=auto_market_price)
                 bot_message = await message.answer(f"Курс {cryptocur_name} на криптобирже автоматически установлен: {auto_market_price}")
+
                 await asyncio.sleep(2)
                 await bot_message.delete()
 
+            except (ConnectionError, TimeoutError) as e:
+                logger.error(f"Ошибка подключения при получении рыночной цены криптовалюты {cryptocur_name} для пользователя {message.from_user.id}: {e}")
+                bot_message = await message.answer("Ошибка подключения к сервису получения цены криптовалюты. Введите цену с клавиатуры!")
+                await state.update_data(message_ids=[message.message_id, bot_message.message_id])
+                return
+
             except Exception as e:
-                bot_message = await message.answer(f"Не удалось получить цену криптовалюты, введите цену с клавиатуры!")
+                logger.exception(f"Ошибка при определении рыночной цены криптовалюты {cryptocur_name} для пользователя {message.from_user.id}: {e}")
+                bot_message = await message.answer("Не удалось получить цену криптовалюты, введите цену с клавиатуры!")
                 await state.update_data(message_ids=[message.message_id, bot_message.message_id])
                 return
         else:
@@ -242,7 +274,8 @@ async def add_market_price(message: types.Message, state: FSMContext, session: A
                 market_price = float(market_price)
                 await state.update_data(market_price=market_price)
             except ValueError:
-                bot_message = await message.answer("Введите корректное числовое значение для цены криптовалюты")
+                logger.warning(f"Некорректное значение рыночной цены криптовалюты: {message.text}")
+                bot_message = await message.answer("Введите корректное числовое значение для рыночной цены криптовалюты")
                 await state.update_data(message_ids=[message.message_id, bot_message.message_id])
                 return
 
@@ -259,8 +292,8 @@ async def add_market_price(message: types.Message, state: FSMContext, session: A
         await delete_bot_and_user_messages(data, message, bot_message)
 
     except Exception as e:
-        print(e)
-        await message.answer(f"Ошибка, обратитесь к @gigcomm, чтобы исправить ее!")
+        logger.error(f"Ошибка при добавлении криптовалюты: {e}")
+        await message.answer("Ошибка, обратитесь к @gigcomm, чтобы исправить ее!")
         await state.clear()
 
     AddСryptocurrency.cryptocurrency_for_change = None

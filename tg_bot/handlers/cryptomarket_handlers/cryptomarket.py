@@ -12,6 +12,7 @@ from tg_bot.handlers.common_imports import *
 from tg_bot.handlers.cryptomarket_handlers.cryptocurrency import cryptocurrency_router
 from tg_bot.keyboards.inline import get_callback_btns
 from tg_bot.keyboards.reply import get_keyboard
+from tg_bot.logger import logger
 from utils.message_utils import delete_regular_messages, delete_bot_and_user_messages
 
 cryptomarket_router = Router()
@@ -26,6 +27,7 @@ CRYPTOMARKET_CANCEL_FSM = get_keyboard(
 @cryptomarket_router.callback_query(lambda callback_query: callback_query.data.startswith("cryptomarket_"))
 async def process_cryptomarket_selection(callback_query: CallbackQuery):
     cryptomarkets_id = int(callback_query.data.split(':')[-1].split('_')[-1])
+    logger.info(f"Пользователь {callback_query.from_user.id} выбрал банк с ID: {cryptomarkets_id}.")
 
     button_cryptomarket = {
         "Криптовалюта": f"cryptocurrency_{cryptomarkets_id}"
@@ -49,6 +51,7 @@ class AddCryptomarket(StatesGroup):
 
 @cryptomarket_router.callback_query(StateFilter(None), F.data.startswith('change_cryptomarket'))
 async def change_cryptomarket(callback_query: CallbackQuery, state: FSMContext, session: AsyncSession):
+    logger.info(f"Пользователь {callback_query.from_user.id} начал изменение криптобиржи.")
     cryptomarket_id = int(callback_query.data.split(":")[-1])
     cryptomarket_for_change = await orm_get_cryptomarket_by_id(session, cryptomarket_id)
 
@@ -66,6 +69,7 @@ async def change_cryptomarket(callback_query: CallbackQuery, state: FSMContext, 
 
 @cryptomarket_router.callback_query(StateFilter(None), F.data.startswith('add_cryptomarket'))
 async def add_cryptomarket(callback_query: CallbackQuery, state: FSMContext):
+    logger.info(f"Пользователь {callback_query.from_user.id} начал добавление криптобиржи.")
     keyboard_message = await callback_query.message.answer("Заполните данные:", reply_markup=CRYPTOMARKET_CANCEL_FSM)
     bot_message = await callback_query.message.answer("Введите название криптобиржи", reply_markup=CRYPTOMARKET_CANCEL_FSM)
     await state.update_data(keyboard_message_id=[keyboard_message.message_id], message_ids=[bot_message.message_id])
@@ -76,6 +80,7 @@ async def add_cryptomarket(callback_query: CallbackQuery, state: FSMContext):
 @cryptomarket_router.message(StateFilter('*'), Command('Отменить действие с криптобиржей'))
 @cryptomarket_router.message(StateFilter('*'), F.text.casefold() == 'отменить действие с криптобиржей')
 async def cancel_handler(message: types.Message, state: FSMContext) -> None:
+    logger.info(f"Пользователь {message.from_user.id} отменил действие с криптобиржой.")
     data = await state.get_data()
 
     await delete_regular_messages(data, message)
@@ -93,6 +98,7 @@ async def cancel_handler(message: types.Message, state: FSMContext) -> None:
 
 @cryptomarket_router.message(AddCryptomarket.name, or_f(F.text))
 async def add_name(message: types.Message, state: FSMContext, session: AsyncSession):
+    logger.info(f"Пользователь {message.from_user.id} вводит название криптобиржи.")
     user_tg_id = message.from_user.id
     user_id = await orm_get_user(session, user_tg_id)
 
@@ -121,7 +127,8 @@ async def add_name(message: types.Message, state: FSMContext, session: AsyncSess
                 await state.update_data(name=name)
 
         except ValueError as e:
-            bot_message = await message.answer(f"Ошибка. Пожалуйста, введите другое название:")
+            logger.error(f"Ошибка при вводе названия криптобиржи: {e}")
+            bot_message = await message.answer("Ошибка. Пожалуйста, введите другое название:")
             await state.update_data(message_ids=[message.message_id, bot_message.message_id])
             return
 
@@ -139,8 +146,8 @@ async def add_name(message: types.Message, state: FSMContext, session: AsyncSess
         await delete_bot_and_user_messages(data, message, bot_message)
 
     except Exception as e:
-        print(f"Ошибка {e}")
-        await message.answer(f"Ошибка, обратитесь к @gigcomm, чтобы исправить ее!")
+        logger.error(f"Ошибка при вводе названия криптобиржи: {e}")
+        await message.answer("Ошибка, обратитесь к @gigcomm, чтобы исправить ее!")
         await state.clear()
 
     AddCryptomarket.cryptomarket_for_change = None
