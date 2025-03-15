@@ -13,8 +13,7 @@ from handlers.admin_private import admin_router
 from handlers.bank_handlers.bank import bank_router
 from handlers.cryptomarket_handlers.cryptomarket import cryptomarket_router
 from handlers.stock_market_handlers.stock_market import stock_market_router
-from tasks.update_price_assets import test_task
-
+from tg_bot.logger import logger
 
 dp.include_router(user_private_router)
 dp.include_router(admin_router)
@@ -29,13 +28,11 @@ async def on_startup(bot):
         await drop_db()
     await create_db()
 
-    # Запуск задачи update_prices в фоновом режиме
-    # test_task.delay()
-
 
 async def on_shutdown(bot):
     print('Бот упал')
 
+logger.info("Приложение запущено с логами")
 
 async def main():
     dp.startup.register(on_startup)
