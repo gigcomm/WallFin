@@ -3,6 +3,8 @@ import asyncio
 
 from tinkoff.invest import AsyncClient, InstrumentType, InstrumentIdType
 
+from tg_bot.logger import logger
+
 INVEST_TOKEN = os.getenv("INVEST_TINKOFF_TOKEN")
 
 
@@ -15,7 +17,7 @@ async def get_instrument_currency(figi: str) -> str | None:
             )
             return instrument_info.instrument.currency
         except Exception as e:
-            print(f"Ошибка при запросе валюты инструмента: {e}")
+            logger.exception(f"Ошибка при запросе валюты инструмента: {e}")
             return None
 
 
@@ -26,12 +28,14 @@ async def get_price_share(name_share: str = ""):
         instrument = next((instr for instr in response.instruments if instr.ticker == name_share), None)
 
         if not instrument:
+            logger.error(f"Инструмент с тикером {name_share} не найден.")
             print(f"Инструмент с тикером {name_share} не найден.")
             return None
 
         currency = await get_instrument_currency(figi=instrument.figi) #ответ в низком регистре
         currency = currency.upper()
         if not currency:
+            logger.error(f"Не удалось определить валюту для инструмента {instrument.figi}.")
             print(f"Не удалось определить валюту для инструмента {instrument.figi}.")
             return None
 
@@ -45,11 +49,14 @@ async def get_price_share(name_share: str = ""):
                     # print(f"Текущая цена: {last_price} RUB")
                     return last_price, currency
                 else:
-                    print("Не удалось получить цену, данные недоступны.")
+                    logger.error("Не удалось получить цену акции, данные недоступны.")
+                    print("Не удалось получить цену акции, данные недоступны.")
             else:
-                print("Цена не найдена")
+                logger.error("Цена акции не найдена.")
+                print("Цена акции не найдена.")
         else:
-            print(f"Инструмент с тикером: {name_share} не найден")
+            logger.error(f"Инструмент (акция) с тикером: {name_share} не найден.")
+            print(f"Инструмент (акция) с тикером: {name_share} не найден.")
 
 
 # указать тикер акции
@@ -70,6 +77,7 @@ async def get_price_fund(name_fund: str = ""):
 
         currency = await get_instrument_currency(figi=instrument.figi)  # ответ в низком регистре
         if not currency:
+            logger.error(f"Не удалось определить валюту для инструмента {instrument.figi}.")
             print(f"Не удалось определить валюту для инструмента {instrument.figi}.")
             return None
 
@@ -83,11 +91,14 @@ async def get_price_fund(name_fund: str = ""):
                     # print(f"Текущая цена: {last_price} RUB")
                     return last_price, currency
                 else:
-                    print("Не удалось получить цену, данные недоступны.")
+                    logger.error("Не удалось получить цену фонда, данные недоступны.")
+                    print("Не удалось получить цену фонда, данные недоступны.")
             else:
-                print("Цена не найдена")
+                logger.error("Цена фонда не найдена.")
+                print("Цена фонда не найдена.")
         else:
-            print(f"Инструмент с тикером: {name_fund} не найден")
+            logger.error(f"Инструмент (фонд) с тикером: {name_fund} не найден.")
+            print(f"Инструмент (фонд) с тикером: {name_fund} не найден.")
 
 # указать тикер фонда
 # asyncio.run(get_price_fund('RU000A0ZZML0'))
