@@ -11,6 +11,7 @@ from database.orm_query import orm_get_cryptocurrency_all, orm_get_share_all, or
 from parsers.Bybit_API import get_price_cryptocurrency
 from parsers.parser_currency_rate import get_exchange_rate
 from parsers.tinkoff_invest_API import get_price_share, get_price_fund
+from tg_bot.logger import logger
 
 redis_client = Redis(host=os.getenv("REDIS_HOST"), port=os.getenv("REDIS_PORT"), db=0, decode_responses=True)
 
@@ -35,7 +36,7 @@ async def update_cryptocurrencies():
                         print(f"⚠️ Цена для {crypto.name} не найдена, не обновляем market_price")
 
             except Exception as e:
-                print(f"Ошибка обновления криптовалюты {crypto.name}:{e}")
+                logger.exception(f"Ошибка обновления криптовалюты {crypto.name}: {e}")
 
         await session.commit()
         return updated_assets
@@ -59,7 +60,7 @@ async def update_shares_and_funds():
                     redis_client.setex(f"price:share:{share.name}", 60, json.dumps({"price": new_price}))
 
             except Exception as e:
-                print(f"Ошибка обновления акции{share.name}:{e}")
+                logger.exception(f"Ошибка обновления акции{share.name}: {e}")
 
         for fund in funds:
             try:
@@ -72,7 +73,7 @@ async def update_shares_and_funds():
                     redis_client.setex(f"price:fund:{fund.name}", 60, json.dumps({"price": new_price}))
 
             except Exception as e:
-                print(f"Ошибка обновления фонда{fund.name}:{e}")
+                logger.exception(f"Ошибка обновления фонда{fund.name}: {e}")
 
         await session.commit()
         return updated_assets
@@ -93,7 +94,7 @@ async def update_currencies():
                     redis_client.setex(f"price:currency:{currency.name}_RUB", 60, json.dumps({"rate": new_rate}))
 
             except Exception as e:
-                print(f"Ошибка обновления курса {currency.name}/'RUB': {e}")
+                logger.exception(f"Ошибка обновления курса {currency.name}/'RUB': {e}")
 
         await session.commit()
         return updated_assets
