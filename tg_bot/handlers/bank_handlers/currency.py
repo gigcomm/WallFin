@@ -122,7 +122,7 @@ async def back_handler(message: types.Message, state: FSMContext) -> None:
 
 @currency_router.message(AddCurrency.name, F.text)
 async def add_name(message: types.Message, state: FSMContext, session: AsyncSession):
-    logger.info(f"Пользователь {callback_query.from_user.id} вводит название валюты.")
+    logger.info(f"Пользователь {message.from_user.id} вводит название валюты.")
     user_tg_id = message.from_user.id
     user_id = await orm_get_user(session, user_tg_id)
 
