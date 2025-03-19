@@ -101,7 +101,7 @@ async def cancel_handler(message: types.Message, state: FSMContext) -> None:
 
 @stock_market_router.message(AddStockMarket.name, or_f(F.text))
 async def add_name(message: types.Message, state: FSMContext, session: AsyncSession):
-    logger.info(f"Пользователь {callback_query.from_user.id} вводит название для фондовой биржи.")
+    logger.info(f"Пользователь {message.from_user.id} вводит название для фондовой биржи.")
     user_tg_id = message.from_user.id
     user_id = await orm_get_user(session, user_tg_id)
 
