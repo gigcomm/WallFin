@@ -27,6 +27,7 @@ async def update_cryptocurrencies():
                 if crypto_name != "USDT":
                     crypto_name += "USDT"
                     new_price = get_price_cryptocurrency(crypto_name)
+
                     if new_price is not None:
                         crypto.market_price = new_price
                         updated_assets.append(crypto)
@@ -51,13 +52,19 @@ async def update_shares_and_funds():
         for share in shares:
             try:
                 new_price_data = await get_price_share(share.name)
+                if not new_price_data:
+                    logger.warning(f"⚠️ Цена для {share.name} не найдена, не обновляем market_price")
+                    continue
+
                 new_price = new_price_data[0]
 
-                if new_price:
+                if new_price is not None:
                     share.market_price = new_price
                     updated_assets.append(share)
 
                     redis_client.setex(f"price:share:{share.name}", 60, json.dumps({"price": new_price}))
+                else:
+                    print(f"⚠️ Цена для {share.name} не найдена, не обновляем market_price")
 
             except Exception as e:
                 logger.exception(f"Ошибка обновления акции{share.name}: {e}")
@@ -65,12 +72,19 @@ async def update_shares_and_funds():
         for fund in funds:
             try:
                 new_price_data = await get_price_fund(fund.name)
+                if not new_price_data:
+                    logger.warning(f"⚠️ Цена для {fund.name} не найдена, не обновляем market_price")
+                    continue
+
                 new_price = new_price_data[0]
-                if new_price:
+
+                if new_price is not None:
                     fund.market_price = new_price
                     updated_assets.append(fund)
 
                     redis_client.setex(f"price:fund:{fund.name}", 60, json.dumps({"price": new_price}))
+                else:
+                    print(f"⚠️ Цена для {fund.name} не найдена, не обновляем market_price")
 
             except Exception as e:
                 logger.exception(f"Ошибка обновления фонда{fund.name}: {e}")
@@ -87,11 +101,13 @@ async def update_currencies():
         for currency in currencies:
             try:
                 new_rate = get_exchange_rate(currency.name, 'RUB')
-                if new_rate:
+                if new_rate is not None:
                     currency.market_price = new_rate
                     updated_assets.append(currency)
 
                     redis_client.setex(f"price:currency:{currency.name}_RUB", 60, json.dumps({"rate": new_rate}))
+                else:
+                    print(f"⚠️ Цена для {currency.name} не найдена, не обновляем курс валюты")
 
             except Exception as e:
                 logger.exception(f"Ошибка обновления курса {currency.name}/'RUB': {e}")
