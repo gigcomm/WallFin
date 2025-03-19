@@ -299,7 +299,7 @@ async def currencies(session, level, menu_name, bank_id, bank_name, page):
     market_price = await get_cache_price("currency", currency.name, session)
     caption = (f"{currency.name}\n\n"
                f"Кол-во: {currency.balance} {currency.name}\n"
-               f"Сумма в рублях: {market_price} x {float(currency.balance)} = {market_price * currency.balance}")
+               f"Сумма в рублях: {float(market_price)} x {float(currency.balance)} = {(float(market_price) * float(currency.balance)):.2f}")
 
     pagination_btns = pages(paginator)
 
