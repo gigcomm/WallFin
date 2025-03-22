@@ -131,8 +131,8 @@ async def add_name(message: types.Message, state: FSMContext, session: AsyncSess
     if message.text == '.' and AddShare.share_for_change:
         await state.update_data(name=AddShare.share_for_change.name)
     else:
-        if len(message.text) >= 50:
-            bot_message = await message.answer("Название акции не должно превышать 50 символов. \n Введите заново")
+        if len(message.text) > 50:
+            bot_message = await message.answer("Название акции не должно превышать 50 символов.\nВведите заново")
             await state.update_data(message_ids=[message.message_id, bot_message.message_id])
             return
 
@@ -150,7 +150,7 @@ async def add_name(message: types.Message, state: FSMContext, session: AsyncSess
 
         except ValueError as e:
             logger.error(f"Ошибка при вводе названия акции: {e}")
-            await message.answer(f"Ошибка. Пожалуйста, введите другое название:")
+            await message.answer("Ошибка. Пожалуйста, введите другое название:")
             return
 
     bot_message = await message.answer("Введите цену покупки акции")
@@ -169,10 +169,17 @@ async def add_purchase_price(message: types.Message, state: FSMContext):
         if message.text == '.' and AddShare.share_for_change:
             await state.update_data(purchase_price=AddShare.share_for_change.purchase_price)
         else:
+            if len(message.text) > 20:
+                bot_message = await message.answer(
+                    "Количество символов для цены покупки акции не должно превышать 20 символов.\nВведите заново")
+                await state.update_data(message_ids=[message.message_id, bot_message.message_id])
+                return
+
             await state.update_data(purchase_price=message.text)
 
         bot_message = await message.answer("Введите цену продажи акции")
         await state.update_data(message_ids=[message.message_id, bot_message.message_id])
+
     except Exception as e:
         logger.error(f"Ошибка при обновлении цены покупки акции: {e}")
         bot_message = await message.answer("Введите корректное числовое значение для цены покупки акции.")
@@ -192,11 +199,18 @@ async def add_selling_price(message: types.Message, state: FSMContext):
         if message.text == '.' and AddShare.share_for_change:
             await state.update_data(selling_price=AddShare.share_for_change.selling_price)
         else:
+            if len(message.text) > 20:
+                bot_message = await message.answer(
+                    "Количество символов для цены продажи акции не должно превышать 20 символов.\nВведите заново")
+                await state.update_data(message_ids=[message.message_id, bot_message.message_id])
+                return
+
             await state.update_data(selling_price=message.text)
 
         bot_message = await message.answer(
             "Введите цену акции на фондовой бирже или напишите слово 'авто' для автоматического определения текущей цены акции")
         await state.update_data(message_ids=[message.message_id, bot_message.message_id])
+
     except Exception as e:
         logger.error(f"Ошибка при обновлении цены продажи акции: {e}")
         bot_message = await message.answer("Введите корректное числовое значение для цены продажи акции.")
@@ -246,6 +260,12 @@ async def add_market_price(message: types.Message, state: FSMContext):
                 return
         else:
             try:
+                if len(message.text) > 10:
+                    bot_message = await message.answer(
+                        "Количество символов для рыночной цены акции не должно превышать 10 символов.\nВведите заново")
+                    await state.update_data(message_ids=[message.message_id, bot_message.message_id])
+                    return
+
                 market_price = float(market_price)
                 await state.update_data(market_price=market_price)
 
@@ -291,6 +311,7 @@ async def add_currency(message: types.Message, state: FSMContext):
 
         bot_message = await message.answer("Введите количество бумаг акции:")
         await state.update_data(message_ids=[message.message_id, bot_message.message_id])
+
     except Exception as e:
         logger.error(f"Ошибка при обновлении валюты акции: {e}")
         bot_message = await message.answer("Введите корректное значение для валюты (USD, EUR, RUB) акции.")
@@ -309,6 +330,12 @@ async def add_quantity(message: types.Message, state: FSMContext, session: Async
     if message.text == '.' and AddShare.share_for_change:
         await state.update_data(quantity=AddShare.share_for_change.quantity)
     else:
+        if len(message.text) > 7:
+            bot_message = await message.answer(
+                "Количество символов для количества бумаг акции не должно превышать 7 символов.\nВведите заново")
+            await state.update_data(message_ids=[message.message_id, bot_message.message_id])
+            return
+
         await state.update_data(quantity=message.text)
 
     data = await state.get_data()
