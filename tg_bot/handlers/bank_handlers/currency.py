@@ -132,8 +132,8 @@ async def add_name(message: types.Message, state: FSMContext, session: AsyncSess
     if message.text == '.' and AddCurrency.currency_for_change:
         await state.update_data(name=AddCurrency.currency_for_change.name)
     else:
-        if len(message.text) >= 50:
-            bot_message = await message.answer("Название валюты не должно превышать 50 символов. \n Введите заново")
+        if len(message.text) > 3:
+            bot_message = await message.answer("Название валюты не должно превышать 3 символа.\nВведите заново")
             await state.update_data(message_ids=[message.message_id, bot_message.message_id])
             return
 
@@ -173,10 +173,16 @@ async def add_balance(message: types.Message, state: FSMContext):
         if message.text == '.' and AddCurrency.currency_for_change:
             await state.update_data(balance=AddCurrency.currency_for_change.balance)
         else:
+            if len(message.text) > 20:
+                bot_message = await message.answer(
+                    "Количество символов баланса валюты не должно превышать 20 символов.\nВведите заново")
+                await state.update_data(message_ids=[message.message_id, bot_message.message_id])
+                return
+
             await state.update_data(balance=message.text)
 
         bot_message = await message.answer(
-            "Введите курс данной валюты или определите его автоматичекси, написав слово 'авто' в поле ввода")
+            "Введите курс данной валюты или определите его автоматически, написав слово 'авто' в поле ввода")
         await state.update_data(message_ids=[message.message_id, bot_message.message_id])
 
     except Exception as e:
@@ -221,6 +227,12 @@ async def add_market_price(message: types.Message, state: FSMContext, session: A
                 return
         else:
             try:
+                if len(message.text) > 10:
+                    bot_message = await message.answer(
+                        "Количество символов для рыночной цены валюты не должно превышать 10 символов.\nВведите заново")
+                    await state.update_data(message_ids=[message.message_id, bot_message.message_id])
+                    return
+
                 market_price = float(market_price)
                 await state.update_data(market_price=market_price)
 

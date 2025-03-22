@@ -125,8 +125,8 @@ async def add_name(message: types.Message, state: FSMContext, session: AsyncSess
     if message.text == '.' and AddAccount.account_for_change:
         await state.update_data(name=AddAccount.account_for_change.name)
     else:
-        if len(message.text) >= 50:
-            bot_message = await message.answer("Название счета не должно превышать 50 символов. \n Введите заново")
+        if len(message.text) > 50:
+            bot_message = await message.answer("Название счета не должно превышать 50 символов.\nВведите заново")
             await state.update_data(message_ids=[message.message_id, bot_message.message_id])
             return
         try:
@@ -164,8 +164,15 @@ async def add_balance(message: types.Message, state: FSMContext, session: AsyncS
         await state.update_data(balance=AddAccount.account_for_change.balance)
     else:
         try:
+            if len(message.text) > 20:
+                bot_message = await message.answer(
+                    "Количество символов баланса счета не должно превышать 10 символов.\nВведите заново")
+                await state.update_data(message_ids=[message.message_id, bot_message.message_id])
+                return
+
             balance = float(message.text)
             await state.update_data(balance=balance)
+
         except ValueError:
             logger.warning(f"Некорректное значение баланса: {message.text}")
             bot_message = await message.answer("Некорректное значение баланса, введите число.")

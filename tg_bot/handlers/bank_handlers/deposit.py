@@ -130,8 +130,8 @@ async def add_name(message: types.Message, state: FSMContext, session: AsyncSess
     if message.text == '.' and AddDeposit.deposit_for_change:
         await state.update_data(name=AddDeposit.deposit_for_change.name)
     else:
-        if len(message.text) >= 50:
-            bot_message = await message.answer("Название вклада не должно превышать 50 символов. \n Введите заново")
+        if len(message.text) > 50:
+            bot_message = await message.answer("Название вклада не должно превышать 50 символов.\nВведите заново")
             await state.update_data(message_ids=[message.message_id, bot_message.message_id])
             return
 
@@ -181,6 +181,7 @@ async def add_start_date(message: types.Message, state: FSMContext):
                 bot_message = await message.answer("Введенная дата не может быть в будущем.\nВведите прошедшую или сегодняшнюю дату.")
                 await state.update_data(message_ids=[message.message_id, bot_message.message_id])
                 return
+
         except ValueError as e:
             logger.error(f"Ошибка при вводе даты начала открытия вклада: {e}")
             bot_message = await message.answer("Введенная дата неверного формата. \nВведите заново в формате ДД.ММ.ГГ.")
@@ -189,7 +190,7 @@ async def add_start_date(message: types.Message, state: FSMContext):
 
         await state.update_data(start_date=user_date)
 
-    bot_message = await message.answer("Введите срок вклада числом (например 6, означает вклад сроком на 6 месяцев)")
+    bot_message = await message.answer("Введите срок вклада числом (например ввод числа '6', означает вклад сроком на 6 месяцев)")
     await state.update_data(message_ids=[message.message_id, bot_message.message_id])
 
     await state.set_state(AddDeposit.deposit_term)
@@ -210,6 +211,12 @@ async def add_deposit_term(message: types.Message, state: FSMContext):
         if message.text == '.' and AddDeposit.deposit_for_change:
             await state.update_data(deposit_term=AddDeposit.deposit_for_change.deposit_term)
         else:
+            if len(message.text) > 3:
+                bot_message = await message.answer(
+                    "Количество символов для срока вклада не должно превышать 3 символов.\nВведите заново")
+                await state.update_data(message_ids=[message.message_id, bot_message.message_id])
+                return
+
             await state.update_data(deposit_term=message.text)
 
         bot_message = await message.answer("Введите процентную ставку")
@@ -231,7 +238,7 @@ async def error(message: types.Message):
 
 @deposit_router.message(AddDeposit.interest_rate, F.text)
 async def add_interest_rate(message: types.Message, state: FSMContext):
-    logger.info(f"Пользователь {message.from_user.id} вводит процентуную ставку вклада.")
+    logger.info(f"Пользователь {message.from_user.id} вводит процентную ставку вклада.")
     data = await state.get_data()
     await delete_regular_messages(data, message)
 
@@ -239,6 +246,12 @@ async def add_interest_rate(message: types.Message, state: FSMContext):
         if message.text == '.' and AddDeposit.deposit_for_change:
             await state.update_data(interest_rate=AddDeposit.deposit_for_change.interest_rate)
         else:
+            if len(message.text) > 7:
+                bot_message = await message.answer(
+                    "Количество символов для процентой ставки вклада не должно превышать 7 символов.\nВведите заново")
+                await state.update_data(message_ids=[message.message_id, bot_message.message_id])
+                return
+
             await state.update_data(interest_rate=message.text)
 
         bot_message = await message.answer("Введите сумму вклада")
@@ -268,8 +281,15 @@ async def add_balance(message: types.Message, state: FSMContext, session: AsyncS
         await state.update_data(balance=AddDeposit.deposit_for_change.balance)
     else:
         try:
+            if len(message.text) > 20:
+                bot_message = await message.answer(
+                    "Количество символов для баланса вклада не должно превышать 20 символов.\nВведите заново")
+                await state.update_data(message_ids=[message.message_id, bot_message.message_id])
+                return
+
             dep_balance = float(message.text)
             await state.update_data(balance=dep_balance)
+
         except ValueError:
             logger.warning(f"Некорректное значение баланса: {message.text}")
             bot_message = await message.answer("Некорректное значение баланса, введите число.")

@@ -131,8 +131,8 @@ async def add_name(message: types.Message, state: FSMContext, session: AsyncSess
     if message.text == '.' and AddСryptocurrency.cryptocurrency_for_change:
         await state.update_data(name=AddСryptocurrency.cryptocurrency_for_change.name)
     else:
-        if len(message.text) >= 10:
-            bot_message = await message.answer("Название криптовалюты не должно превышать 10 символов. \n Введите заново")
+        if len(message.text) > 10:
+            bot_message = await message.answer("Название криптовалюты не должно превышать 10 символов.\nВведите заново")
             await state.update_data(message_ids=[message.message_id, bot_message.message_id])
             return
 
@@ -170,6 +170,12 @@ async def add_balance(message: types.Message, state: FSMContext):
         await state.update_data(balance=AddСryptocurrency.cryptocurrency_for_change.balance)
     else:
         try:
+            if len(message.text) > 20:
+                bot_message = await message.answer(
+                    "Количество символов цены криптовалюты не должно превышать 20 символов.\nВведите заново")
+                await state.update_data(message_ids=[message.message_id, bot_message.message_id])
+                return
+
             cryptocurrency_balance = float(message.text)
             await state.update_data(balance=cryptocurrency_balance)
         except ValueError:
@@ -194,6 +200,12 @@ async def add_purchase_price(message: types.Message, state: FSMContext):
         if message.text == '.' and AddСryptocurrency.cryptocurrency_for_change:
             await state.update_data(purchase_price=AddСryptocurrency.cryptocurrency_for_change.purchase_price)
         else:
+            if len(message.text) > 20:
+                bot_message = await message.answer(
+                    "Количество символов цены покупки криптовалюты не должно превышать 20 символов.\nВведите заново")
+                await state.update_data(message_ids=[message.message_id, bot_message.message_id])
+                return
+
             await state.update_data(purchase_price=message.text)
 
         bot_message = await message.answer("Введите цену продажи криптовалюты")
@@ -216,6 +228,12 @@ async def add_selling_price(message: types.Message, state: FSMContext):
         if message.text == '.' and AddСryptocurrency.cryptocurrency_for_change:
             await state.update_data(selling_price=AddСryptocurrency.cryptocurrency_for_change.selling_price)
         else:
+            if len(message.text) > 20:
+                bot_message = await message.answer(
+                    "Количество символов цены продажи криптовалюты не должно превышать 20 символов.\nВведите заново")
+                await state.update_data(message_ids=[message.message_id, bot_message.message_id])
+                return
+
             await state.update_data(selling_price=message.text)
 
         bot_message = await message.answer(
@@ -271,8 +289,15 @@ async def add_market_price(message: types.Message, state: FSMContext, session: A
                 return
         else:
             try:
+                if len(message.text) > 10:
+                    bot_message = await message.answer(
+                        "Количество символов для рыночной цены криптовалюты не должно превышать 10 символов.\nВведите заново")
+                    await state.update_data(message_ids=[message.message_id, bot_message.message_id])
+                    return
+
                 market_price = float(market_price)
                 await state.update_data(market_price=market_price)
+
             except ValueError:
                 logger.warning(f"Некорректное значение рыночной цены криптовалюты: {message.text}")
                 bot_message = await message.answer("Введите корректное числовое значение для рыночной цены криптовалюты")
@@ -285,6 +310,7 @@ async def add_market_price(message: types.Message, state: FSMContext, session: A
             await orm_update_cryptocurrency(session, data["cryptocurrency_id"], data)
         else:
             await orm_add_cryptocurrency(session, data)
+
         bot_message = await message.answer(f"Криптовалюта {cryptocur_name} добавлена", reply_markup=types.ReplyKeyboardRemove())
         await state.update_data(message_ids=[message.message_id, bot_message.message_id])
         await state.clear()
