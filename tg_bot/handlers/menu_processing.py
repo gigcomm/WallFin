@@ -363,7 +363,7 @@ async def deposits(session, level, menu_name, bank_id, bank_name, page):
                f"Конец вклада: {deposit.start_date + relativedelta(months=deposit.deposit_term)}\n"
                f"Сумма на вкладе: {deposit.balance}\n"
                f"Процентная ставка: {deposit.interest_rate}\n"
-               f"Сумма в конце срока:{final_amount:.2f}")
+               f"Сумма в конце срока: {final_amount:.2f}")
 
     pagination_btns = pages(paginator)
 
@@ -422,7 +422,7 @@ async def cryptocurrencies(session, level, menu_name, cryptomarket_id, cryptomar
     market_price = await get_cache_price("crypto", cryptocurrency.name, session)
     print(market_price)
     current_value = float(market_price) * float(cryptocurrency.balance)
-    initial_value = cryptocurrency.purchase_price * float(cryptocurrency.balance)
+    initial_value = float(cryptocurrency.purchase_price) * float(cryptocurrency.balance)
 
     caption = (f"{cryptocurrency.name}\n\n"
                f"Цена покупки: {cryptocurrency.purchase_price} USD\n"
@@ -489,7 +489,7 @@ async def funds(session, level, menu_name, stockmarket_id, stockmarket_name, pag
     fund = paginator.get_page()[0]
     market_price = await get_cache_price("fund", fund.name, session)
     current_value = float(market_price) * float(fund.quantity)
-    initial_value = fund.purchase_price * float(fund.quantity)
+    initial_value = float(fund.purchase_price) * float(fund.quantity)
 
     caption = (f"{fund.name}\n\n"
                f"Цена покупки: {fund.purchase_price} {fund.currency}\n"
@@ -556,7 +556,7 @@ async def shares(session, level, menu_name, stockmarket_id, stockmarket_name, pa
     share = paginator.get_page()[0]
     market_price = await get_cache_price("share", share.name, session)
     current_value = float(market_price) * float(share.quantity)
-    initial_value = share.purchase_price * float(share.quantity)
+    initial_value = float(share.purchase_price) * float(share.quantity)
 
     caption = (f"{share.name}\n\n"
                f"Цена покупки: {share.purchase_price} {share.currency}\n"
