@@ -89,6 +89,7 @@ async def cancel_handler(message: types.Message, state: FSMContext) -> None:
     if AddCurrency.currency_for_change:
         AddCurrency.currency_for_change = None
     await state.clear()
+
     bot_message = await message.answer("Действия отменены", reply_markup=types.ReplyKeyboardRemove())
     await state.update_data(message_ids=[message.message_id, bot_message.message_id])
 
@@ -179,15 +180,15 @@ async def add_balance(message: types.Message, state: FSMContext):
                 await state.update_data(message_ids=[message.message_id, bot_message.message_id])
                 return
 
-            await state.update_data(balance=message.text)
+            await state.update_data(balance=float(message.text))
 
         bot_message = await message.answer(
             "Введите курс данной валюты или определите его автоматически, написав слово 'авто' в поле ввода")
         await state.update_data(message_ids=[message.message_id, bot_message.message_id])
 
-    except Exception as e:
-        logger.error(f"Ошибка при обновлении баланса для пользователя {message.from_user.id}: {e}")
-        bot_message = await message.answer("Произошла ошибка при установке баланса. Попробуйте еще раз.")
+    except ValueError:
+        logger.warning(f"Некорректное значение баланса валюты: {message.text}")
+        bot_message = await message.answer("Некорректное значение баланса, введите число, например, 123.45")
         await state.update_data(message_ids=[message.message_id, bot_message.message_id])
 
     await state.set_state(AddCurrency.market_price)
@@ -233,11 +234,10 @@ async def add_market_price(message: types.Message, state: FSMContext, session: A
                     await state.update_data(message_ids=[message.message_id, bot_message.message_id])
                     return
 
-                market_price = float(market_price)
-                await state.update_data(market_price=market_price)
+                await state.update_data(market_price=float(market_price))
 
             except ValueError as e:
-                logger.error(f"Ошибка при вводе курса с клавиатуры валюты: {e}")
+                logger.error(f"Ошибка при вводе с клавиатуры курса валюты: {e}")
                 bot_message = await message.answer("Введите корректное числовое значение для курса валюты.")
                 await state.update_data(message_ids=[message.message_id, bot_message.message_id])
                 return
