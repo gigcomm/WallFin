@@ -170,12 +170,11 @@ async def add_balance(message: types.Message, state: FSMContext, session: AsyncS
                 await state.update_data(message_ids=[message.message_id, bot_message.message_id])
                 return
 
-            balance = float(message.text)
-            await state.update_data(balance=balance)
+            await state.update_data(balance=float(message.text))
 
         except ValueError:
-            logger.warning(f"Некорректное значение баланса: {message.text}")
-            bot_message = await message.answer("Некорректное значение баланса, введите число.")
+            logger.warning(f"Некорректное значение баланса счета: {message.text}")
+            bot_message = await message.answer("Некорректное значение баланса, введите число, например, 123.45")
             await state.update_data(message_ids=[message.message_id, bot_message.message_id])
             return
 

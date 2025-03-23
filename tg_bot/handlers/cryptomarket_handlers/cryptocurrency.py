@@ -89,6 +89,7 @@ async def cancel_handler(message: types.Message, state: FSMContext) -> None:
     if AddСryptocurrency.cryptocurrency_for_change:
         AddСryptocurrency.cryptocurrency_for_change = None
     await state.clear()
+
     bot_message = await message.answer("Действия отменены", reply_markup=types.ReplyKeyboardRemove())
     await state.update_data(message_ids=[message.message_id, bot_message.message_id])
 
@@ -176,11 +177,11 @@ async def add_balance(message: types.Message, state: FSMContext):
                 await state.update_data(message_ids=[message.message_id, bot_message.message_id])
                 return
 
-            cryptocurrency_balance = float(message.text)
-            await state.update_data(balance=cryptocurrency_balance)
+            await state.update_data(balance=float(message.text))
+
         except ValueError:
-            logger.warning(f"Некорректное значение баланса: {message.text}")
-            bot_message = await message.answer("Некорректное значение баланса, введите число.")
+            logger.warning(f"Некорректное значение баланса криптовалюты: {message.text}")
+            bot_message = await message.answer("Некорректное значение баланса, введите число, например, 123.45")
             await state.update_data(message_ids=[message.message_id, bot_message.message_id])
             return
 
@@ -206,10 +207,16 @@ async def add_purchase_price(message: types.Message, state: FSMContext):
                 await state.update_data(message_ids=[message.message_id, bot_message.message_id])
                 return
 
-            await state.update_data(purchase_price=message.text)
+            await state.update_data(purchase_price=float(message.text))
 
         bot_message = await message.answer("Введите цену продажи криптовалюты")
         await state.update_data(message_ids=[message.message_id, bot_message.message_id])
+
+    except ValueError:
+        logger.warning(f"Некорректное значение цены покупки криптовалюты: {message.text}")
+        bot_message = await message.answer("Некорректное значение цены покупки, введите число, например, 123.45")
+        await state.update_data(message_ids=[message.message_id, bot_message.message_id])
+
     except Exception as e:
         logger.error(f"Ошибка при обновлении цены покупки криптовалюты: {e}")
         bot_message = await message.answer("Введите корректное числовое значение для цены покупки криптовалюты.")
@@ -234,11 +241,16 @@ async def add_selling_price(message: types.Message, state: FSMContext):
                 await state.update_data(message_ids=[message.message_id, bot_message.message_id])
                 return
 
-            await state.update_data(selling_price=message.text)
+            await state.update_data(selling_price=float(message.text))
 
         bot_message = await message.answer(
             "Введите цену криптовалюты на криптобирже или введите слово 'авто' для автоматического определения "
             "текущей цены криптовалюты")
+        await state.update_data(message_ids=[message.message_id, bot_message.message_id])
+
+    except ValueError:
+        logger.warning(f"Некорректное значение цены продажи криптовалюты: {message.text}")
+        bot_message = await message.answer("Некорректное значение цены продажи, введите число, например, 123.45")
         await state.update_data(message_ids=[message.message_id, bot_message.message_id])
 
     except Exception as e:
@@ -295,8 +307,7 @@ async def add_market_price(message: types.Message, state: FSMContext, session: A
                     await state.update_data(message_ids=[message.message_id, bot_message.message_id])
                     return
 
-                market_price = float(market_price)
-                await state.update_data(market_price=market_price)
+                await state.update_data(market_price=float(market_price))
 
             except ValueError:
                 logger.warning(f"Некорректное значение рыночной цены криптовалюты: {message.text}")

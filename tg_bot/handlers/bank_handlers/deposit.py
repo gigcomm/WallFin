@@ -88,6 +88,7 @@ async def cancel_handler(message: types.Message, state: FSMContext) -> None:
     if AddDeposit.deposit_for_change:
         AddDeposit.deposit_for_change = None
     await state.clear()
+
     bot_message = await message.answer("Действия отменены", reply_markup=types.ReplyKeyboardRemove())
     await state.update_data(message_ids=[message.message_id, bot_message.message_id])
 
@@ -184,7 +185,7 @@ async def add_start_date(message: types.Message, state: FSMContext):
 
         except ValueError as e:
             logger.error(f"Ошибка при вводе даты начала открытия вклада: {e}")
-            bot_message = await message.answer("Введенная дата неверного формата. \nВведите заново в формате ДД.ММ.ГГ.")
+            bot_message = await message.answer("Введенная дата неверного формата.\nВведите заново в формате ДД.ММ.ГГ.")
             await state.update_data(message_ids=[message.message_id, bot_message.message_id])
             return
 
@@ -217,9 +218,14 @@ async def add_deposit_term(message: types.Message, state: FSMContext):
                 await state.update_data(message_ids=[message.message_id, bot_message.message_id])
                 return
 
-            await state.update_data(deposit_term=message.text)
+            await state.update_data(deposit_term=int(message.text))
 
         bot_message = await message.answer("Введите процентную ставку")
+        await state.update_data(message_ids=[message.message_id, bot_message.message_id])
+
+    except ValueError:
+        logger.warning(f"Некорректное значение срока вклада: {message.text}")
+        bot_message = await message.answer("Некорректное значение срока вклада, введите число, например, 12")
         await state.update_data(message_ids=[message.message_id, bot_message.message_id])
 
     except Exception as e:
@@ -257,6 +263,11 @@ async def add_interest_rate(message: types.Message, state: FSMContext):
         bot_message = await message.answer("Введите сумму вклада")
         await state.update_data(message_ids=[message.message_id, bot_message.message_id])
 
+    except ValueError:
+        logger.warning(f"Некорректное значение процентной ставки вклада: {message.text}")
+        bot_message = await message.answer("Некорректное значение процентной ставки, введите число, например, 12.34")
+        await state.update_data(message_ids=[message.message_id, bot_message.message_id])
+
     except Exception as e:
         logger.error(f"Ошибка при обновлении процентной ставки вклада для пользователя {message.from_user.id}: {e}")
         bot_message = await message.answer("Произошла ошибка при установке процентной ставки вклада. Попробуйте еще раз.")
@@ -287,12 +298,11 @@ async def add_balance(message: types.Message, state: FSMContext, session: AsyncS
                 await state.update_data(message_ids=[message.message_id, bot_message.message_id])
                 return
 
-            dep_balance = float(message.text)
-            await state.update_data(balance=dep_balance)
+            await state.update_data(balance=float(message.text))
 
         except ValueError:
-            logger.warning(f"Некорректное значение баланса: {message.text}")
-            bot_message = await message.answer("Некорректное значение баланса, введите число.")
+            logger.warning(f"Некорректное значение баланса вклада: {message.text}")
+            bot_message = await message.answer("Некорректное значение баланса, введите число, например 123.45.")
             await state.update_data(message_ids=[message.message_id, bot_message.message_id])
             return
 
