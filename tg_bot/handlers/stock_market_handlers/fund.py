@@ -177,19 +177,20 @@ async def add_purchase_price(message: types.Message, state: FSMContext):
 
             await state.update_data(purchase_price=float(message.text))
 
-        bot_message = await message.answer("Введите цену продажи фонда")
-        await state.update_data(message_ids=[message.message_id, bot_message.message_id])
-
     except ValueError:
         logger.warning(f"Некорректное значение цены покупки фонда: {message.text}")
         bot_message = await message.answer("Некорректное значение цены покупки фонда, введите число, например, 123.45")
         await state.update_data(message_ids=[message.message_id, bot_message.message_id])
+        return
 
     except Exception as e:
         logger.error(f"Ошибка при обновлении цены покупки фонда: {e}")
         bot_message = await message.answer("Введите корректное числовое значение для цены покупки фонда.")
         await state.update_data(message_ids=[message.message_id, bot_message.message_id])
         return
+
+    bot_message = await message.answer("Введите цену продажи фонда")
+    await state.update_data(message_ids=[message.message_id, bot_message.message_id])
 
     await state.set_state(AddFund.selling_price)
 
@@ -212,20 +213,21 @@ async def add_selling_price(message: types.Message, state: FSMContext):
 
             await state.update_data(selling_price=float(message.text))
 
-        bot_message = await message.answer(
-            "Введите цену фонда на фондовой бирже или введите слово 'авто' для автоматического определения текущей цены фонда")
-        await state.update_data(message_ids=[message.message_id, bot_message.message_id])
-
     except ValueError:
         logger.warning(f"Некорректное значение цены продажи фонда: {message.text}")
         bot_message = await message.answer("Некорректное значение цены продажи, введите число, например, 123.45")
         await state.update_data(message_ids=[message.message_id, bot_message.message_id])
+        return
 
     except Exception as e:
         logger.error(f"Ошибка при обновлении цены продажи фонда: {e}")
         bot_message = await message.answer("Введите корректное числовое значение для цены продажи фонда.")
         await state.update_data(message_ids=[message.message_id, bot_message.message_id])
         return
+
+    bot_message = await message.answer(
+        "Введите цену фонда на фондовой бирже или введите слово 'авто' для автоматического определения текущей цены фонда")
+    await state.update_data(message_ids=[message.message_id, bot_message.message_id])
 
     await state.set_state(AddFund.market_price)
 
@@ -321,14 +323,14 @@ async def add_currency(message: types.Message, state: FSMContext):
             updated_data = await state.get_data()
             print(f"Обновленные данные после ввода валюты: {updated_data}")
 
-        bot_message = await message.answer("Введите количество бумаг акции:")
-        await state.update_data(message_ids=[message.message_id, bot_message.message_id])
-
     except Exception as e:
         logger.error(f"Ошибка при обновлении валюты фонда: {e}")
         bot_message = await message.answer("Введите корректное значение для валюты (USD, EUR, RUB) фонда.")
         await state.update_data(message_ids=[message.message_id, bot_message.message_id])
         return
+
+    bot_message = await message.answer("Введите количество бумаг акции:")
+    await state.update_data(message_ids=[message.message_id, bot_message.message_id])
 
     await state.set_state(AddFund.quantity)
 
@@ -367,6 +369,7 @@ async def add_quantity(message: types.Message, state: FSMContext, session: Async
         logger.warning(f"Некорректное значение количества бумаг фонда: {message.text}")
         bot_message = await message.answer("Некорректное значение количества бумаг фонда, введите число, например, 12")
         await state.update_data(message_ids=[message.message_id, bot_message.message_id])
+        return
 
     except Exception as e:
         logger.error(f"Ошибка при добавлении фонда: {e}")

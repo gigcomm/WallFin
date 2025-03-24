@@ -56,6 +56,7 @@ async def change_deposit(callback_query: types.CallbackQuery, state: FSMContext,
     keyboard_message = await callback_query.message.answer("В режиме изменения, если поставить точку, данное поле будет прежним,"
         "а процесс перейдет к следующему полю объекта.\nИзмените данные:",
         reply_markup=DEPOSIT_CANCEL_AND_BACK_FSM)
+
     bot_message = await callback_query.message.answer("Введите название вклада:")
     await state.update_data(keyboard_message_id=[keyboard_message.message_id], message_ids=[bot_message.message_id])
 
@@ -69,6 +70,7 @@ async def add_deposit(callback_query: CallbackQuery, state: FSMContext):
     await state.update_data(bank_id=bank_id)
 
     keyboard_message = await callback_query.message.answer("Заполните данные:")
+
     bot_message = await callback_query.message.answer("Введите название вклада", reply_markup=DEPOSIT_CANCEL_FSM)
     await state.update_data(keyboard_message_id=[keyboard_message.message_id], message_ids=[bot_message.message_id])
 
@@ -220,19 +222,20 @@ async def add_deposit_term(message: types.Message, state: FSMContext):
 
             await state.update_data(deposit_term=int(message.text))
 
-        bot_message = await message.answer("Введите процентную ставку")
-        await state.update_data(message_ids=[message.message_id, bot_message.message_id])
-
     except ValueError:
         logger.warning(f"Некорректное значение срока вклада: {message.text}")
         bot_message = await message.answer("Некорректное значение срока вклада, введите число, например, 12")
         await state.update_data(message_ids=[message.message_id, bot_message.message_id])
+        return
 
     except Exception as e:
         logger.error(f"Ошибка при обновлении срока вклада для пользователя {message.from_user.id}: {e}")
         bot_message = await message.answer("Произошла ошибка при установке срока вклада. Попробуйте еще раз.")
         await state.update_data(message_ids=[message.message_id, bot_message.message_id])
         return
+
+    bot_message = await message.answer("Введите процентную ставку")
+    await state.update_data(message_ids=[message.message_id, bot_message.message_id])
 
     await state.set_state(AddDeposit.interest_rate)
 
@@ -260,19 +263,20 @@ async def add_interest_rate(message: types.Message, state: FSMContext):
 
             await state.update_data(interest_rate=message.text)
 
-        bot_message = await message.answer("Введите сумму вклада")
-        await state.update_data(message_ids=[message.message_id, bot_message.message_id])
-
     except ValueError:
         logger.warning(f"Некорректное значение процентной ставки вклада: {message.text}")
         bot_message = await message.answer("Некорректное значение процентной ставки, введите число, например, 12.34")
         await state.update_data(message_ids=[message.message_id, bot_message.message_id])
+        return
 
     except Exception as e:
         logger.error(f"Ошибка при обновлении процентной ставки вклада для пользователя {message.from_user.id}: {e}")
         bot_message = await message.answer("Произошла ошибка при установке процентной ставки вклада. Попробуйте еще раз.")
         await state.update_data(message_ids=[message.message_id, bot_message.message_id])
         return
+
+    bot_message = await message.answer("Введите сумму вклада")
+    await state.update_data(message_ids=[message.message_id, bot_message.message_id])
 
     await state.set_state(AddDeposit.balance)
 

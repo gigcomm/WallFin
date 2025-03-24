@@ -57,6 +57,7 @@ async def change_currency(callback_query: CallbackQuery, state: FSMContext, sess
         "В режиме изменения, если поставить точку, данное поле будет прежним,"
         "а процесс перейдет к следующему полю объекта.\nИзмените данные:",
         reply_markup=CURRENCY_CANCEL_AND_BACK_FSM)
+
     bot_message = await callback_query.message.answer("Введите название валюты, например USD")
     await state.update_data(keyboard_message_id=[keyboard_message.message_id], message_ids=[bot_message.message_id])
 
@@ -70,6 +71,7 @@ async def add_currency(callback_query: CallbackQuery, state: FSMContext):
     await state.update_data(bank_id=bank_id)
 
     keyboard_message = await callback_query.message.answer("Заполните данные:", reply_markup=CURRENCY_CANCEL_FSM)
+
     bot_message = await (callback_query.message.answer("Введите название валюты, например USD"))
     await state.update_data(keyboard_message_id=[keyboard_message.message_id], message_ids=[bot_message.message_id])
 
@@ -158,6 +160,7 @@ async def add_name(message: types.Message, state: FSMContext, session: AsyncSess
 
     data = await state.get_data()
     currency_name = data['name']
+
     bot_message = await message.answer(f"Введите количество валюты {currency_name} на балансе")
     await state.update_data(message_ids=[message.message_id, bot_message.message_id])
 
@@ -182,14 +185,15 @@ async def add_balance(message: types.Message, state: FSMContext):
 
             await state.update_data(balance=float(message.text))
 
-        bot_message = await message.answer(
-            "Введите курс данной валюты или определите его автоматически, написав слово 'авто' в поле ввода")
-        await state.update_data(message_ids=[message.message_id, bot_message.message_id])
-
     except ValueError:
         logger.warning(f"Некорректное значение баланса валюты: {message.text}")
         bot_message = await message.answer("Некорректное значение баланса, введите число, например, 123.45")
         await state.update_data(message_ids=[message.message_id, bot_message.message_id])
+        return
+
+    bot_message = await message.answer(
+        "Введите курс данной валюты или определите его автоматически, написав слово 'авто' в поле ввода")
+    await state.update_data(message_ids=[message.message_id, bot_message.message_id])
 
     await state.set_state(AddCurrency.market_price)
 
