@@ -91,8 +91,8 @@ async def cancel_handler(message: types.Message, state: FSMContext) -> None:
     current_state = await state.get_state()
     if current_state is None:
         return
-
     await state.clear()
+
     bot_message = await message.answer("Действия отменены", reply_markup=types.ReplyKeyboardRemove())
     await state.update_data(message_ids=[message.message_id, bot_message.message_id])
 

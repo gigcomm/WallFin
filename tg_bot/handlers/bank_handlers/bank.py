@@ -29,21 +29,21 @@ BANK_CANCEL_FSM = get_keyboard(
 )
 
 
-@bank_router.message(F.text == "Банки")
-async def starting_at_bank(message: types.Message, session: AsyncSession):
-    try:
-        banks = await orm_get_bank(session, message.from_user.id)
-        logger.info(f"Пользователь {message.from_user.id} запросил список банков. Найдено: {len(banks)} банков.")
-
-        buttons_bank = {bank.name: "bank_" + str(bank.id) for bank in banks}
-        await message.answer(
-            text="Выберите банк:",
-            reply_markup=get_callback_btns(btns=buttons_bank)
-        )
-
-    except Exception as e:
-        logger.error(f"Ошибка при получении списка банков для пользователя {message.from_user.id}: {e}")
-        await message.answer("Ошибка при загрузке банков. Пожалуйста, попробуйте позже.")
+# @bank_router.message(F.text == "Банки")
+# async def starting_at_bank(message: types.Message, session: AsyncSession):
+#     try:
+#         banks = await orm_get_bank(session, message.from_user.id)
+#         logger.info(f"Пользователь {message.from_user.id} запросил список банков. Найдено: {len(banks)} банков.")
+#
+#         buttons_bank = {bank.name: "bank_" + str(bank.id) for bank in banks}
+#         await message.answer(
+#             text="Выберите банк:",
+#             reply_markup=get_callback_btns(btns=buttons_bank)
+#         )
+#
+#     except Exception as e:
+#         logger.error(f"Ошибка при получении списка банков для пользователя {message.from_user.id}: {e}")
+#         await message.answer("Ошибка при загрузке банков. Пожалуйста, попробуйте позже.")
 
 
 @bank_router.callback_query(lambda callback_query: callback_query.data.startswith("bank_"))
@@ -85,6 +85,7 @@ async def change_bank(callback_query: CallbackQuery, state: FSMContext, session:
         "В режиме изменения, если поставить точку, данное поле будет прежним,"
         "а процесс перейдет к следующему полю объекта.\nИзмените данные:",
         reply_markup=BANK_CANCEL_FSM)
+
     bot_message = await callback_query.message.answer("Введите название банка")
     await state.update_data(keyboard_message_id=[keyboard_message.message_id], message_ids=[bot_message.message_id])
 
@@ -95,6 +96,7 @@ async def change_bank(callback_query: CallbackQuery, state: FSMContext, session:
 async def add_bank(callback_query: CallbackQuery, state: FSMContext):
     logger.info(f"Пользователь {callback_query.from_user.id} начал добавление банка.")
     keyboard_message = await callback_query.message.answer("Заполните данные:", reply_markup=BANK_CANCEL_FSM)
+
     bot_message = await callback_query.message.answer("Введите название банка")
     await state.update_data(keyboard_message_id=[keyboard_message.message_id], message_ids=[bot_message.message_id])
 
@@ -112,7 +114,6 @@ async def cancel_handler(message: types.Message, state: FSMContext) -> None:
     current_state = await state.get_state()
     if current_state is None:
         return
-
     await state.clear()
 
     bot_message = await message.answer("Действия отменены", reply_markup=types.ReplyKeyboardRemove())

@@ -149,8 +149,10 @@ async def add_name(message: types.Message, state: FSMContext, session: AsyncSess
 
     data = await state.get_data()
     account_name = data['name']
+
     bot_message = await message.answer(f"Введите количество денег на балансе счета {account_name}")
     await state.update_data(message_ids=[message.message_id, bot_message.message_id])
+
     await state.set_state(AddAccount.balance)
 
 

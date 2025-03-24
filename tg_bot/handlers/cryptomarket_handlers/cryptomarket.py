@@ -90,6 +90,7 @@ async def cancel_handler(message: types.Message, state: FSMContext) -> None:
         return
 
     await state.clear()
+
     bot_message = await message.answer("Действия отменены", reply_markup=types.ReplyKeyboardRemove())
     await state.update_data(message_ids=[message.message_id, bot_message.message_id])
 
@@ -110,7 +111,7 @@ async def add_name(message: types.Message, state: FSMContext, session: AsyncSess
         await state.update_data(name=AddCryptomarket.cryptomarket_for_change.name)
     else:
         if len(message.text) > 50:
-            bot_message = await message.answer("Название криптобиржи не должно превышать 50 символов. \n Введите заново")
+            bot_message = await message.answer("Название криптобиржи не должно превышать 50 символов.\nВведите заново")
             await state.update_data(message_ids=[message.message_id, bot_message.message_id])
             return
 

@@ -12,7 +12,6 @@ async def get_cache_price(asset_type: str, asset_name: str, session):
     try:
         cached_data = redis_client.get(key)
         if cached_data:
-            print(cached_data)
             price = json.loads(cached_data)["price"]
 
             if price is not None:
