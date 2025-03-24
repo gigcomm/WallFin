@@ -209,19 +209,20 @@ async def add_purchase_price(message: types.Message, state: FSMContext):
 
             await state.update_data(purchase_price=float(message.text))
 
-        bot_message = await message.answer("Введите цену продажи криптовалюты")
-        await state.update_data(message_ids=[message.message_id, bot_message.message_id])
-
     except ValueError:
         logger.warning(f"Некорректное значение цены покупки криптовалюты: {message.text}")
         bot_message = await message.answer("Некорректное значение цены покупки, введите число, например, 123.45")
         await state.update_data(message_ids=[message.message_id, bot_message.message_id])
+        return
 
     except Exception as e:
         logger.error(f"Ошибка при обновлении цены покупки криптовалюты: {e}")
         bot_message = await message.answer("Введите корректное числовое значение для цены покупки криптовалюты.")
         await state.update_data(message_ids=[message.message_id, bot_message.message_id])
         return
+
+    bot_message = await message.answer("Введите цену продажи криптовалюты")
+    await state.update_data(message_ids=[message.message_id, bot_message.message_id])
 
     await state.set_state(AddСryptocurrency.selling_price)
 
@@ -243,21 +244,22 @@ async def add_selling_price(message: types.Message, state: FSMContext):
 
             await state.update_data(selling_price=float(message.text))
 
-        bot_message = await message.answer(
-            "Введите цену криптовалюты на криптобирже или введите слово 'авто' для автоматического определения "
-            "текущей цены криптовалюты")
-        await state.update_data(message_ids=[message.message_id, bot_message.message_id])
-
     except ValueError:
         logger.warning(f"Некорректное значение цены продажи криптовалюты: {message.text}")
         bot_message = await message.answer("Некорректное значение цены продажи, введите число, например, 123.45")
         await state.update_data(message_ids=[message.message_id, bot_message.message_id])
+        return
 
     except Exception as e:
         logger.error(f"Ошибка при обновлении цены продажи криптовалюты: {e}")
         bot_message = await message.answer("Введите корректное числовое значение для цены продажи криптовалюты.")
         await state.update_data(message_ids=[message.message_id, bot_message.message_id])
         return
+
+    bot_message = await message.answer(
+        "Введите цену криптовалюты на криптобирже или введите слово 'авто' для автоматического определения "
+        "текущей цены криптовалюты")
+    await state.update_data(message_ids=[message.message_id, bot_message.message_id])
 
     await state.set_state(AddСryptocurrency.market_price)
 

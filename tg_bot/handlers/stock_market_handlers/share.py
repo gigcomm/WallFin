@@ -178,19 +178,20 @@ async def add_purchase_price(message: types.Message, state: FSMContext):
 
             await state.update_data(purchase_price=float(message.text))
 
-        bot_message = await message.answer("Введите цену продажи акции")
-        await state.update_data(message_ids=[message.message_id, bot_message.message_id])
-
     except ValueError:
         logger.warning(f"Некорректное значение цены покупки акции: {message.text}")
         bot_message = await message.answer("Некорректное значение цены покупки акции, введите число, например, 123.45")
         await state.update_data(message_ids=[message.message_id, bot_message.message_id])
+        return
 
     except Exception as e:
         logger.error(f"Ошибка при обновлении цены покупки акции: {e}")
         bot_message = await message.answer("Введите корректное числовое значение для цены покупки акции.")
         await state.update_data(message_ids=[message.message_id, bot_message.message_id])
         return
+
+    bot_message = await message.answer("Введите цену продажи акции")
+    await state.update_data(message_ids=[message.message_id, bot_message.message_id])
 
     await state.set_state(AddShare.selling_price)
 
@@ -213,20 +214,21 @@ async def add_selling_price(message: types.Message, state: FSMContext):
 
             await state.update_data(selling_price=float(message.text))
 
-        bot_message = await message.answer(
-            "Введите цену акции на фондовой бирже или напишите слово 'авто' для автоматического определения текущей цены акции")
-        await state.update_data(message_ids=[message.message_id, bot_message.message_id])
-
     except ValueError:
         logger.warning(f"Некорректное значение цены продажи акции: {message.text}")
         bot_message = await message.answer("Некорректное значение цены продажи акции, введите число, например, 123.45")
         await state.update_data(message_ids=[message.message_id, bot_message.message_id])
+        return
 
     except Exception as e:
         logger.error(f"Ошибка при обновлении цены продажи акции: {e}")
         bot_message = await message.answer("Введите корректное числовое значение для цены продажи акции.")
         await state.update_data(message_ids=[message.message_id, bot_message.message_id])
         return
+
+    bot_message = await message.answer(
+        "Введите цену акции на фондовой бирже или напишите слово 'авто' для автоматического определения текущей цены акции")
+    await state.update_data(message_ids=[message.message_id, bot_message.message_id])
 
     await state.set_state(AddShare.market_price)
 
@@ -294,6 +296,7 @@ async def add_market_price(message: types.Message, state: FSMContext):
 
     bot_message = await message.answer("Введите валюту для акции (например, RUB, USD, EUR):")
     await state.update_data(message_ids=[message.message_id, bot_message.message_id])
+
     await state.set_state(AddShare.currency)
 
 
@@ -319,14 +322,14 @@ async def add_currency(message: types.Message, state: FSMContext):
             updated_data = await state.get_data()
             print(f"Обновленные данные после ввода валюты: {updated_data}")
 
-        bot_message = await message.answer("Введите количество бумаг акции:")
-        await state.update_data(message_ids=[message.message_id, bot_message.message_id])
-
     except Exception as e:
         logger.error(f"Ошибка при обновлении валюты акции: {e}")
         bot_message = await message.answer("Введите корректное значение для валюты (USD, EUR, RUB) акции.")
         await state.update_data(message_ids=[message.message_id, bot_message.message_id])
         return
+
+    bot_message = await message.answer("Введите количество бумаг акции:")
+    await state.update_data(message_ids=[message.message_id, bot_message.message_id])
 
     await state.set_state(AddShare.quantity)
 
@@ -353,6 +356,7 @@ async def add_quantity(message: types.Message, state: FSMContext, session: Async
             logger.warning(f"Некорректное значение количество бумаг акции: {message.text}")
             bot_message = await message.answer("Некорректное значение количество бумаг акции, введите число, например, 12")
             await state.update_data(message_ids=[message.message_id, bot_message.message_id])
+            return
 
     data = await state.get_data()
     try:
