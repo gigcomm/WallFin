@@ -261,7 +261,7 @@ async def add_interest_rate(message: types.Message, state: FSMContext):
                 await state.update_data(message_ids=[message.message_id, bot_message.message_id])
                 return
 
-            await state.update_data(interest_rate=message.text)
+            await state.update_data(interest_rate=float(message.text))
 
     except ValueError:
         logger.warning(f"Некорректное значение процентной ставки вклада: {message.text}")
