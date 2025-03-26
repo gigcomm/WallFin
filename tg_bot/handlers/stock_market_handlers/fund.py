@@ -78,7 +78,7 @@ async def add_fund(callback_query: CallbackQuery, state: FSMContext):
 @fund_router.message(StateFilter('*'), Command('Отменить действие с фондом'))
 @fund_router.message(StateFilter('*'), F.text.casefold() == 'отменить действие с фондом')
 async def cancel_handler(message: types.Message, state: FSMContext) -> None:
-    logger.info(f"Пользователь {callback_query.from_user.id} отменил действие с фондом.")
+    logger.info(f"Пользователь {message.from_user.id} отменил действие с фондом.")
     data = await state.get_data()
     await delete_regular_messages(data, message)
 
@@ -98,7 +98,7 @@ async def cancel_handler(message: types.Message, state: FSMContext) -> None:
 @fund_router.message(StateFilter('*'), Command('Назад к предыдущему шагу для фонда'))
 @fund_router.message(StateFilter('*'), F.text.casefold() == "назад к предыдущему шагу для фонда")
 async def back_handler(message: types.Message, state: FSMContext) -> None:
-    logger.info(f"Пользователь {callback_query.from_user.id} вернулся к предыдущему шагу для изменения фонда.")
+    logger.info(f"Пользователь {message.from_user.id} вернулся к предыдущему шагу для изменения фонда.")
     data = await state.get_data()
     await delete_regular_messages(data, message)
 
@@ -121,7 +121,7 @@ async def back_handler(message: types.Message, state: FSMContext) -> None:
 
 @fund_router.message(AddFund.name, F.text)
 async def add_name(message: types.Message, state: FSMContext, session: AsyncSession):
-    logger.info(f"Пользователь {callback_query.from_user.id} вводит название фонда.")
+    logger.info(f"Пользователь {message.from_user.id} вводит название фонда.")
     data = await state.get_data()
     await delete_regular_messages(data, message)
 
