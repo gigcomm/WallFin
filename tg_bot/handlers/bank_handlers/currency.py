@@ -242,7 +242,7 @@ async def add_market_price(message: types.Message, state: FSMContext, session: A
 
             except ValueError as e:
                 logger.error(f"Ошибка при вводе с клавиатуры курса валюты: {e}")
-                bot_message = await message.answer("Введите корректное числовое значение для курса валюты.")
+                bot_message = await message.answer("Введите корректное числовое значение для курса валюты, например, 123.45")
                 await state.update_data(message_ids=[message.message_id, bot_message.message_id])
                 return
 
