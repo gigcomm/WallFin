@@ -2,7 +2,6 @@ import asyncio
 import json
 import os
 
-import redis
 from redis import Redis
 from celery_app import celery_app
 
@@ -28,13 +27,14 @@ async def update_cryptocurrencies():
                     crypto_name += "USDT"
                     new_price = get_price_cryptocurrency(crypto_name)
 
-                    if new_price is not None:
-                        crypto.market_price = new_price
-                        updated_assets.append(crypto)
+                    if not new_price:
+                        logger.warning(f"⚠️ Цена для {crypto_name} не найдена, не обновляем market_price")
+                        continue
 
-                        redis_client.setex(f"price:crypto:{crypto.name}", 60, json.dumps({"price": new_price}))
-                    else:
-                        print(f"⚠️ Цена для {crypto.name} не найдена, не обновляем market_price")
+                    crypto.market_price = new_price
+                    updated_assets.append(crypto)
+
+                    redis_client.setex(f"price:crypto:{crypto.name}", 60, json.dumps({"price": new_price}))
 
             except Exception as e:
                 logger.exception(f"Ошибка обновления криптовалюты {crypto.name}: {e}")
@@ -52,19 +52,17 @@ async def update_shares_and_funds():
         for share in shares:
             try:
                 new_price_data = await get_price_share(share.name)
+
                 if not new_price_data:
                     logger.warning(f"⚠️ Цена для {share.name} не найдена, не обновляем market_price")
                     continue
 
                 new_price = new_price_data[0]
 
-                if new_price is not None:
-                    share.market_price = new_price
-                    updated_assets.append(share)
+                share.market_price = new_price
+                updated_assets.append(share)
 
-                    redis_client.setex(f"price:share:{share.name}", 60, json.dumps({"price": new_price}))
-                else:
-                    print(f"⚠️ Цена для {share.name} не найдена, не обновляем market_price")
+                redis_client.setex(f"price:share:{share.name}", 60, json.dumps({"price": new_price}))
 
             except Exception as e:
                 logger.exception(f"Ошибка обновления акции{share.name}: {e}")
@@ -72,19 +70,17 @@ async def update_shares_and_funds():
         for fund in funds:
             try:
                 new_price_data = await get_price_fund(fund.name)
+
                 if not new_price_data:
                     logger.warning(f"⚠️ Цена для {fund.name} не найдена, не обновляем market_price")
                     continue
 
                 new_price = new_price_data[0]
 
-                if new_price is not None:
-                    fund.market_price = new_price
-                    updated_assets.append(fund)
+                fund.market_price = new_price
+                updated_assets.append(fund)
 
-                    redis_client.setex(f"price:fund:{fund.name}", 60, json.dumps({"price": new_price}))
-                else:
-                    print(f"⚠️ Цена для {fund.name} не найдена, не обновляем market_price")
+                redis_client.setex(f"price:fund:{fund.name}", 60, json.dumps({"price": new_price}))
 
             except Exception as e:
                 logger.exception(f"Ошибка обновления фонда{fund.name}: {e}")
@@ -101,6 +97,7 @@ async def update_currencies():
         for currency in currencies:
             try:
                 new_rate = get_exchange_rate(currency.name, 'RUB')
+
                 if new_rate is not None:
                     currency.market_price = new_rate
                     updated_assets.append(currency)
