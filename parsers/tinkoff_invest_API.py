@@ -75,7 +75,7 @@ async def get_price_fund(name_fund: str = ""):
             None
         )
 
-        currency = await get_instrument_currency(figi=instrument.figi)  # ответ в низком регистре
+        currency = await get_instrument_currency(figi=instrument.figi)
         if not currency:
             logger.error(f"Не удалось определить валюту для инструмента {instrument.figi}.")
             print(f"Не удалось определить валюту для инструмента {instrument.figi}.")
@@ -99,6 +99,3 @@ async def get_price_fund(name_fund: str = ""):
         else:
             logger.error(f"Инструмент (фонд) с тикером: {name_fund} не найден.")
             print(f"Инструмент (фонд) с тикером: {name_fund} не найден.")
-
-# указать тикер фонда
-# asyncio.run(get_price_fund('RU000A0ZZML0'))
