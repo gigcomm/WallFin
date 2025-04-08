@@ -1,6 +1,6 @@
 from sqlalchemy import select, update, delete
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import selectinload
 
 from database.models import User, Bank, StockMarket, Cryptocurrency, CryptoMarket, Account, Currency, Deposit, Share, \
     Fund, Banner
@@ -74,18 +74,18 @@ async def check_existing_bank(session: AsyncSession, name: str, user_id: int):
 
 async def orm_get_bank_by_id(session: AsyncSession, bank_id: int):
     result = await session.execute(select(Bank).where(Bank.id == bank_id).options(
-        joinedload(Bank.account),
-        joinedload(Bank.currency),
-        joinedload(Bank.deposit))
+        selectinload(Bank.account),
+        selectinload(Bank.currency),
+        selectinload(Bank.deposit))
     )
     return result.unique().scalars().first()
 
 
 async def orm_get_bank(session: AsyncSession, user_id: int):
     result = await session.execute(select(Bank).where(Bank.user_id == user_id).options(
-        joinedload(Bank.account),
-        joinedload(Bank.currency),
-        joinedload(Bank.deposit))
+        selectinload(Bank.account),
+        selectinload(Bank.currency),
+        selectinload(Bank.deposit))
     )
     return result.unique().scalars().all()
 
@@ -123,16 +123,16 @@ async def check_existing_stock_market(session: AsyncSession, name: str, user_id:
 
 async def orm_get_stock_market_by_id(session: AsyncSession, stockmarket_id: int):
     result = await session.execute(select(StockMarket).where(StockMarket.id == stockmarket_id).options(
-        joinedload(StockMarket.share),
-        joinedload(StockMarket.fund)
+        selectinload(StockMarket.share),
+        selectinload(StockMarket.fund)
     ))
     return result.unique().scalars().first()
 
 
 async def orm_get_stock_market(session: AsyncSession, user_id: int):
     result = await session.execute(select(StockMarket).where(StockMarket.user_id == user_id).options(
-        joinedload(StockMarket.share),
-        joinedload(StockMarket.fund))
+        selectinload(StockMarket.share),
+        selectinload(StockMarket.fund))
     )
     return result.unique().scalars().all()
 
@@ -170,14 +170,14 @@ async def check_existing_cryptomarket(session: AsyncSession, name: str, user_id:
 
 async def orm_get_cryptomarket_by_id(session: AsyncSession, cryptomarket_id: int):
     result = await session.execute(select(CryptoMarket).where(CryptoMarket.id == cryptomarket_id).options(
-        joinedload(CryptoMarket.cryptocurrency)
+        selectinload(CryptoMarket.cryptocurrency)
     ))
     return result.unique().scalars().first()
 
 
 async def orm_get_cryptomarket(session: AsyncSession, user_id: int):
     result = await session.execute(select(CryptoMarket).where(CryptoMarket.user_id == user_id).options(
-        joinedload(CryptoMarket.cryptocurrency))
+        selectinload(CryptoMarket.cryptocurrency))
     )
     return result.unique().scalars().all()
 
