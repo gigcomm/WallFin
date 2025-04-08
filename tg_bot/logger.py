@@ -5,7 +5,7 @@ log_formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s")
 handler = RotatingFileHandler(
     "bot.log",
     maxBytes=5 * 1024,
-    backupCount=5
+    backupCount=7
 )
 handler.setFormatter(log_formatter)
 

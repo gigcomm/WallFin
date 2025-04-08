@@ -16,9 +16,14 @@ def get_price_cryptocurrency(name_cryptocurrency: str = "") -> object:
         logger.info(f"Успешное получение цены {name_cryptocurrency}: {price}")
         return price
 
-    except Exception as e:
-        logger.error(f"Ошибка при получении цены криптовалюты {name_cryptocurrency}: {e}")
-        raise
+    except KeyError:
+        logger.warning(f"⚠️ Некорректный формат ответа от API для {name_cryptocurrency}")
+        return None
 
-#ввод SOLUSDT для выдачи цены криптовалюты
-# get_price_cryptocurrency("SOLUSDT")
+    except ConnectionError:
+        logger.error(f"🚨 Проблема с соединением при запросе {name_cryptocurrency}")
+        return None
+
+    except Exception:
+        logger.exception(f"❌ Ошибка при получении цены {name_cryptocurrency}")
+        return None
