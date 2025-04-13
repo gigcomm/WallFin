@@ -420,7 +420,6 @@ async def cryptocurrencies(session, level, menu_name, cryptomarket_id, cryptomar
 
     cryptocurrency = paginator.get_page()[0]
     market_price = await get_cache_price("crypto", cryptocurrency.name, session)
-    print(market_price)
     current_value = float(market_price) * float(cryptocurrency.balance)
     initial_value = float(cryptocurrency.purchase_price) * float(cryptocurrency.balance)
 
