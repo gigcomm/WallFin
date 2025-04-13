@@ -9,6 +9,7 @@ from database.orm_query import orm_add_user, orm_delete_bank, orm_delete_stock_m
 from tg_bot.handlers.menu_processing import get_menu_content
 from tg_bot.keyboards.inline import MenuCallBack
 from finance.total_balance import calculate_total_balance
+from tg_bot.logger import logger
 
 user_private_router = Router()
 
@@ -39,18 +40,13 @@ async def menu_command(callback_query: CallbackQuery, callback_data: MenuCallBac
         await orm_delete_cryptomarket(session, int(cryptomarket_id))
         await callback_query.answer("Криптобиржа удалена")
 
-
-
     if menu_name == "total_balance":
         user_tg_id = int(callback_data.user_tg_id)
-        if user_tg_id is None:
-            await callback_query.answer("Ошибка: не удалось получить идентификатор пользователя.", show_alert=True)
-            return
 
         try:
             await calculate_total_balance(session, user_tg_id)
         except Exception as e:
-            print(f"Ошибка при вычислении баланса: {e}")
+            logger.exception(f"Ошибка при вычислении баланса: {e}")
             await callback_query.answer("Ошибка при вычислении баланса. Попробуйте позже.")
             return
 
