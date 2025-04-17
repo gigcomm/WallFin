@@ -60,7 +60,7 @@ def get_user_assets_btns(*, level: int, categories: list, user_tg_id: int, sizes
     return keyboard.adjust(*sizes).as_markup()
 
 
-def get_user_banks_btns(*, level: int, banks: list, user_tg_id: int, sizes: tuple[int] = (2, 1)):
+def get_user_banks_btns(*, level: int, banks: list, user_tg_id: int, sizes: tuple[int] = (2, )):
     keyboard = InlineKeyboardBuilder()
 
     for bank in banks:
@@ -129,7 +129,7 @@ def get_user_cryptomarkets_btns(*, level: int, cryptomarkets: list, user_tg_id: 
     return keyboard.adjust(*sizes).as_markup()
 
 
-def get_user_assets_bank_btns(*, level: int, assets_bank: list, bank_id: int, sizes: tuple[int] = (3, 1, 1,)):
+def get_user_assets_bank_btns(*, level: int, assets_bank: list, bank_id: int, sizes: tuple[int] = (3, 1, 1, 2)):
     keyboard = InlineKeyboardBuilder()
 
     for asset_bank in assets_bank:
@@ -152,6 +152,11 @@ def get_user_assets_bank_btns(*, level: int, assets_bank: list, bank_id: int, si
         callback_data=MenuCallBack(level=level - 1, menu_name='Банки').pack()
     ))
 
+    keyboard.add(InlineKeyboardButton(
+        text='Назад в главное меню',
+        callback_data=MenuCallBack(level=level - 3, menu_name='main').pack()
+    ))
+
     return keyboard.adjust(*sizes).as_markup()
 
 
@@ -172,7 +177,7 @@ def get_confirm_delete_bank(*, level: int, bank_name: str, bank_id: int, sizes: 
 
 
 def get_user_assets_stockmarkets_btns(*, level: int, assets_stockmarkets: list, stockmarket_id: int,
-                                      sizes: tuple[int] = (2, 1, 1,)):
+                                      sizes: tuple[int] = (2, 1, 1, 2)):
     keyboard = InlineKeyboardBuilder()
 
     for asset_stockmarket in assets_stockmarkets:
@@ -197,6 +202,11 @@ def get_user_assets_stockmarkets_btns(*, level: int, assets_stockmarkets: list, 
         callback_data=MenuCallBack(level=level - 1, menu_name='Финбиржи').pack()
     ))
 
+    keyboard.add(InlineKeyboardButton(
+        text='Назад в главное меню',
+        callback_data=MenuCallBack(level=level - 3, menu_name='main').pack()
+    ))
+
     return keyboard.adjust(*sizes).as_markup()
 
 
@@ -218,7 +228,7 @@ def get_confirm_delete_stockmarket(*, level: int, stockmarket_name: str, stockma
 
 
 def get_user_assets_cryptomarkets_btns(*, level: int, assets_cryptomarkets: list, cryptomarket_id: int,
-                                       sizes: tuple[int] = (1,)):
+                                       sizes: tuple[int] = (1, 1, 1, 2)):
     keyboard = InlineKeyboardBuilder()
 
     for asset_cryptomarket in assets_cryptomarkets:
@@ -242,6 +252,11 @@ def get_user_assets_cryptomarkets_btns(*, level: int, assets_cryptomarkets: list
     keyboard.add(InlineKeyboardButton(
         text='Назад',
         callback_data=MenuCallBack(level=level - 1, menu_name='Криптобиржи').pack()
+    ))
+
+    keyboard.add(InlineKeyboardButton(
+        text='Назад в главное меню',
+        callback_data=MenuCallBack(level=level - 3, menu_name='main').pack()
     ))
 
     return keyboard.adjust(*sizes).as_markup()
@@ -272,9 +287,30 @@ def get_account_btns(
         bank_id: int | None,
         bank_name: str | None,
         account_id: int | None,
-        sizes: tuple[int] = (1, 2, 1)
+        sizes: tuple[int] = (2, 1, 2, 1)
 ):
     keyboard = InlineKeyboardBuilder()
+
+    row = []
+    for text, menu_name in pagination_btns.items():
+        if menu_name == 'next':
+            row.append(InlineKeyboardButton(text=text,
+                                            callback_data=MenuCallBack(
+                                                level=level,
+                                                menu_name='Счета',
+                                                bank_id=bank_id,
+                                                page=page + 1).pack()))
+
+        elif menu_name == 'previous':
+            row.append(InlineKeyboardButton(text=text,
+                                            callback_data=MenuCallBack(
+                                                level=level,
+                                                menu_name='Счета',
+                                                bank_id=bank_id,
+                                                page=page - 1).pack()))
+
+    if row:
+        keyboard.row(*row)
 
     keyboard.add(InlineKeyboardButton(
         text='Добавить счет',
@@ -292,30 +328,15 @@ def get_account_btns(
 
     keyboard.add(InlineKeyboardButton(
         text='Назад',
-        callback_data=MenuCallBack(level=level - 1, menu_name=bank_name, bank_id=bank_id).pack()))
+        callback_data=MenuCallBack(level=level - 1, menu_name=bank_name, bank_id=bank_id).pack()
+    ))
+
+    keyboard.add(InlineKeyboardButton(
+        text='Назад в главное меню',
+        callback_data=MenuCallBack(level=level-4, menu_name='main').pack()
+    ))
 
     keyboard.adjust(*sizes)
-
-    row = []
-    for text, menu_name in pagination_btns.items():
-        if menu_name == 'next':
-            row.append(InlineKeyboardButton(text=text,
-                                            callback_data=MenuCallBack(
-                                                level=level,
-                                                menu_name='Счета',
-                                                bank_id=bank_id,
-                                                page=page + 1).pack()))
-
-        elif menu_name == 'previous':
-            row.append(InlineKeyboardButton(text=text,
-                                            callback_data=MenuCallBack(
-                                                level=level,
-                                                menu_name='Счета',
-                                                bank_id=bank_id,
-                                                page=page - 1).pack()))
-
-    if row:
-        keyboard.row(*row)
 
     return keyboard.as_markup()
 
@@ -328,9 +349,30 @@ def get_currency_btns(
         bank_id: int | None,
         bank_name: str | None,
         currency_id: int | None,
-        sizes: tuple[int] = (1, 2, 1)
+        sizes: tuple[int] = (2, 1, 2, 1)
 ):
     keyboard = InlineKeyboardBuilder()
+
+    row = []
+    for text, menu_name in pagination_btns.items():
+        if menu_name == 'next':
+            row.append(InlineKeyboardButton(text=text,
+                                            callback_data=MenuCallBack(
+                                                level=level,
+                                                menu_name='Валюты',
+                                                bank_id=bank_id,
+                                                page=page + 1).pack()))
+
+        elif menu_name == 'previous':
+            row.append(InlineKeyboardButton(text=text,
+                                            callback_data=MenuCallBack(
+                                                level=level,
+                                                menu_name='Валюты',
+                                                bank_id=bank_id,
+                                                page=page - 1).pack()))
+
+    if row:
+        keyboard.row(*row)
 
     keyboard.add(InlineKeyboardButton(
         text='Добавить валюту',
@@ -348,30 +390,15 @@ def get_currency_btns(
 
     keyboard.add(InlineKeyboardButton(
         text='Назад',
-        callback_data=MenuCallBack(level=level - 1, menu_name=bank_name, bank_id=bank_id).pack()))
+        callback_data=MenuCallBack(level=level - 1, menu_name=bank_name, bank_id=bank_id).pack()
+    ))
+
+    keyboard.add(InlineKeyboardButton(
+        text='Назад в главное меню',
+        callback_data=MenuCallBack(level=level - 4, menu_name='main').pack()
+    ))
 
     keyboard.adjust(*sizes)
-
-    row = []
-    for text, menu_name in pagination_btns.items():
-        if menu_name == 'next':
-            row.append(InlineKeyboardButton(text=text,
-                                            callback_data=MenuCallBack(
-                                                level=level,
-                                                menu_name='Валюты',
-                                                bank_id=bank_id,
-                                                page=page + 1).pack()))
-
-        elif menu_name == 'previous':
-            row.append(InlineKeyboardButton(text=text,
-                                            callback_data=MenuCallBack(
-                                                level=level,
-                                                menu_name='Валюты',
-                                                bank_id=bank_id,
-                                                page=page - 1).pack()))
-
-    if row:
-        keyboard.row(*row)
 
     return keyboard.as_markup()
 
@@ -384,9 +411,30 @@ def get_deposit_btns(
         bank_name: str | None,
         deposit_id: int | None,
         page: int | None,
-        sizes: tuple[int] = (1, 2, 1)
+        sizes: tuple[int] = (2, 1, 2, 1)
 ):
     keyboard = InlineKeyboardBuilder()
+
+    row = []
+    for text, menu_name in pagination_btns.items():
+        if menu_name == 'next':
+            row.append(InlineKeyboardButton(text=text,
+                                            callback_data=MenuCallBack(
+                                                level=level,
+                                                menu_name='Вклады',
+                                                bank_id=bank_id,
+                                                page=page + 1).pack()))
+
+        elif menu_name == 'previous':
+            row.append(InlineKeyboardButton(text=text,
+                                            callback_data=MenuCallBack(
+                                                level=level,
+                                                menu_name='Вклады',
+                                                bank_id=bank_id,
+                                                page=page - 1).pack()))
+
+    if row:
+        keyboard.row(*row)
 
     keyboard.add(InlineKeyboardButton(
         text='Добавить вклад',
@@ -407,28 +455,12 @@ def get_deposit_btns(
         callback_data=MenuCallBack(level=level - 1, menu_name=bank_name, bank_id=bank_id).pack()
     ))
 
+    keyboard.add(InlineKeyboardButton(
+        text='Назад в главное меню',
+        callback_data=MenuCallBack(level=level - 4, menu_name='main').pack()
+    ))
+
     keyboard.adjust(*sizes)
-
-    row = []
-    for text, menu_name in pagination_btns.items():
-        if menu_name == 'next':
-            row.append(InlineKeyboardButton(text=text,
-                                            callback_data=MenuCallBack(
-                                                level=level,
-                                                menu_name='Вклады',
-                                                bank_id=bank_id,
-                                                page=page + 1).pack()))
-
-        elif menu_name == 'previous':
-            row.append(InlineKeyboardButton(text=text,
-                                            callback_data=MenuCallBack(
-                                                level=level,
-                                                menu_name='Вклады',
-                                                bank_id=bank_id,
-                                                page=page - 1).pack()))
-
-    if row:
-        keyboard.row(*row)
 
     return keyboard.as_markup()
 
@@ -441,9 +473,31 @@ def get_cryptocurrencies_btns(
         cryptomarket_name: str | None,
         cryptocurrency_id: int | None,
         page: int | None,
-        sizes: tuple[int] = (1, 1, 1, 1)
+        sizes: tuple[int] = (2, 1, 2, 1)
 ):
     keyboard = InlineKeyboardBuilder()
+
+    row = []
+    for text, menu_name in pagination_btns.items():
+        if menu_name == 'next':
+            row.append(InlineKeyboardButton(text=text,
+                                            callback_data=MenuCallBack(
+                                                level=level,
+                                                menu_name='Криптовалюты',
+                                                cryptomarket_id=cryptomarket_id,
+                                                page=page + 1).pack()))
+
+        elif menu_name == 'previous':
+            row.append(InlineKeyboardButton(text=text,
+                                            callback_data=MenuCallBack(
+                                                level=level,
+                                                menu_name='Криптовалюты',
+                                                cryptomarket_id=cryptomarket_id,
+                                                page=page - 1).pack()))
+
+    if row:
+        keyboard.row(*row)
+
     keyboard.add(InlineKeyboardButton(
         text='Добавить криптовалюту',
         callback_data=f'add_cryptocurrency:{cryptomarket_id}')
@@ -464,28 +518,12 @@ def get_cryptocurrencies_btns(
         callback_data=MenuCallBack(level=level - 1, menu_name=cryptomarket_name, cryptomarket_id=cryptomarket_id).pack()
     ))
 
+    keyboard.add(InlineKeyboardButton(
+        text='Назад в главное меню',
+        callback_data=MenuCallBack(level=level - 4, menu_name='main').pack()
+    ))
+
     keyboard.adjust(*sizes)
-
-    row = []
-    for text, menu_name in pagination_btns.items():
-        if menu_name == 'next':
-            row.append(InlineKeyboardButton(text=text,
-                                            callback_data=MenuCallBack(
-                                                level=level,
-                                                menu_name='Криптовалюты',
-                                                cryptomarket_id=cryptomarket_id,
-                                                page=page + 1).pack()))
-
-        elif menu_name == 'previous':
-            row.append(InlineKeyboardButton(text=text,
-                                            callback_data=MenuCallBack(
-                                                level=level,
-                                                menu_name='Криптовалюты',
-                                                cryptomarket_id=cryptomarket_id,
-                                                page=page - 1).pack()))
-
-    if row:
-        keyboard.row(*row)
 
     return keyboard.as_markup()
 
@@ -498,9 +536,30 @@ def get_funds_btns(
         stockmarket_name: str | None,
         fund_id: int | None,
         page: int | None,
-        sizes: tuple[int] = (1, 2, 1)
+        sizes: tuple[int] = (2, 1, 2, 1)
 ):
     keyboard = InlineKeyboardBuilder()
+
+    row = []
+    for text, menu_name in pagination_btns.items():
+        if menu_name == 'next':
+            row.append(InlineKeyboardButton(text=text,
+                                            callback_data=MenuCallBack(
+                                                level=level,
+                                                menu_name='Фонды',
+                                                stockmarket_id=stockmarket_id,
+                                                page=page + 1).pack()))
+
+        elif menu_name == 'previous':
+            row.append(InlineKeyboardButton(text=text,
+                                            callback_data=MenuCallBack(
+                                                level=level,
+                                                menu_name='Фонды',
+                                                stockmarket_id=stockmarket_id,
+                                                page=page - 1).pack()))
+
+    if row:
+        keyboard.row(*row)
 
     keyboard.add(InlineKeyboardButton(
         text='Добавить фонд',
@@ -522,28 +581,12 @@ def get_funds_btns(
         callback_data=MenuCallBack(level=level - 1, menu_name=stockmarket_name, stockmarket_id=stockmarket_id).pack()
     ))
 
+    keyboard.add(InlineKeyboardButton(
+        text='Назад в главное меню',
+        callback_data=MenuCallBack(level=level - 4, menu_name='main').pack()
+    ))
+
     keyboard.adjust(*sizes)
-
-    row = []
-    for text, menu_name in pagination_btns.items():
-        if menu_name == 'next':
-            row.append(InlineKeyboardButton(text=text,
-                                            callback_data=MenuCallBack(
-                                                level=level,
-                                                menu_name='Фонды',
-                                                stockmarket_id=stockmarket_id,
-                                                page=page + 1).pack()))
-
-        elif menu_name == 'previous':
-            row.append(InlineKeyboardButton(text=text,
-                                            callback_data=MenuCallBack(
-                                                level=level,
-                                                menu_name='Фонды',
-                                                stockmarket_id=stockmarket_id,
-                                                page=page - 1).pack()))
-
-    if row:
-        keyboard.row(*row)
 
     return keyboard.as_markup()
 
@@ -556,9 +599,30 @@ def get_shares_btns(
         stockmarket_name: str | None,
         share_id: int | None,
         page: int | None,
-        sizes: tuple[int] = (1, 2, 1)
+        sizes: tuple[int] = (2, 1, 2, 1)
 ):
     keyboard = InlineKeyboardBuilder()
+
+    row = []
+    for text, menu_name in pagination_btns.items():
+        if menu_name == 'next':
+            row.append(InlineKeyboardButton(text=text,
+                                            callback_data=MenuCallBack(
+                                                level=level,
+                                                menu_name='Акции',
+                                                stockmarket_id=stockmarket_id,
+                                                page=page + 1).pack()))
+
+        elif menu_name == 'previous':
+            row.append(InlineKeyboardButton(text=text,
+                                            callback_data=MenuCallBack(
+                                                level=level,
+                                                menu_name='Акции',
+                                                stockmarket_id=stockmarket_id,
+                                                page=page - 1).pack()))
+
+    if row:
+        keyboard.row(*row)
 
     keyboard.add(InlineKeyboardButton(
         text='Добавить акцию',
@@ -580,28 +644,12 @@ def get_shares_btns(
         callback_data=MenuCallBack(level=level - 1, menu_name=stockmarket_name, stockmarket_id=stockmarket_id).pack()
     ))
 
+    keyboard.add(InlineKeyboardButton(
+        text='Назад в главное меню',
+        callback_data=MenuCallBack(level=level - 4, menu_name='main').pack()
+    ))
+
     keyboard.adjust(*sizes)
-
-    row = []
-    for text, menu_name in pagination_btns.items():
-        if menu_name == 'next':
-            row.append(InlineKeyboardButton(text=text,
-                                            callback_data=MenuCallBack(
-                                                level=level,
-                                                menu_name='Акции',
-                                                stockmarket_id=stockmarket_id,
-                                                page=page + 1).pack()))
-
-        elif menu_name == 'previous':
-            row.append(InlineKeyboardButton(text=text,
-                                            callback_data=MenuCallBack(
-                                                level=level,
-                                                menu_name='Акции',
-                                                stockmarket_id=stockmarket_id,
-                                                page=page - 1).pack()))
-
-    if row:
-        keyboard.row(*row)
 
     return keyboard.as_markup()
 
