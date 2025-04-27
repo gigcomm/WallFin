@@ -54,13 +54,13 @@ def get_user_assets_btns(*, level: int, categories: list, user_tg_id: int, sizes
                                        user_tg_id=user_tg_id).pack()
         ))
     keyboard.add(InlineKeyboardButton(
-        text='Назад',
+        text='🔙Назад',
         callback_data=MenuCallBack(level=level - 1, menu_name='main').pack()
     ))
     return keyboard.adjust(*sizes).as_markup()
 
 
-def get_user_banks_btns(*, level: int, banks: list, user_tg_id: int, sizes: tuple[int] = (2, )):
+def get_user_banks_btns(*, level: int, banks: list, user_tg_id: int, sizes: tuple[int] = (2, 1)):
     keyboard = InlineKeyboardBuilder()
 
     for bank in banks:
@@ -71,12 +71,12 @@ def get_user_banks_btns(*, level: int, banks: list, user_tg_id: int, sizes: tupl
         ))
 
     keyboard.add(InlineKeyboardButton(
-        text='Добавить банк',
+        text='➕Добавить банк',
         callback_data='add_bank'
     ))
 
     keyboard.add(InlineKeyboardButton(
-        text='Назад',
+        text='🔙Назад',
         callback_data=MenuCallBack(level=level - 1, menu_name='assets').pack()
     ))
 
@@ -94,12 +94,12 @@ def get_user_stockmarkets_btns(*, level: int, stockmarkets: list, user_tg_id: in
         ))
 
     keyboard.add(InlineKeyboardButton(
-        text='Добавить финбиржу',
+        text='➕Добавить финбиржу',
         callback_data='add_stockmarket'
     ))
 
     keyboard.add(InlineKeyboardButton(
-        text='Назад',
+        text='🔙Назад',
         callback_data=MenuCallBack(level=level - 1, menu_name='assets').pack()
     ))
 
@@ -117,12 +117,12 @@ def get_user_cryptomarkets_btns(*, level: int, cryptomarkets: list, user_tg_id: 
         ))
 
     keyboard.add(InlineKeyboardButton(
-        text='Добавить криптобиржу',
+        text='➕Добавить криптобиржу',
         callback_data='add_cryptomarket'
     ))
 
     keyboard.add(InlineKeyboardButton(
-        text='Назад',
+        text='🔙Назад',
         callback_data=MenuCallBack(level=level - 1, menu_name='assets').pack()
     ))
 
@@ -138,22 +138,22 @@ def get_user_assets_bank_btns(*, level: int, assets_bank: list, bank_id: int, si
             callback_data=MenuCallBack(level=level + 1, menu_name=asset_bank, bank_id=bank_id).pack()))
     if assets_bank:
         keyboard.add(InlineKeyboardButton(
-            text='Изменить банк',
+            text='🔄Изменить банк',
             callback_data=f'change_bank:{bank_id}'
         ))
 
         keyboard.add(InlineKeyboardButton(
-            text='Удалить банк',
+            text='❌Удалить банк',
             callback_data=MenuCallBack(level=level, menu_name="delete_bank", bank_id=bank_id).pack()
         ))
 
     keyboard.add(InlineKeyboardButton(
-        text='Назад',
+        text='🔙Назад',
         callback_data=MenuCallBack(level=level - 1, menu_name='Банки').pack()
     ))
 
     keyboard.add(InlineKeyboardButton(
-        text='Назад в главное меню',
+        text='🔙Назад в главное меню',
         callback_data=MenuCallBack(level=level - 3, menu_name='main').pack()
     ))
 
@@ -164,12 +164,12 @@ def get_confirm_delete_bank(*, level: int, bank_name: str, bank_id: int, sizes: 
     keyboard = InlineKeyboardBuilder()
 
     keyboard.add(InlineKeyboardButton(
-        text='Да, удалить',
+        text='❌ДА, УДАЛИТЬ',
         callback_data=MenuCallBack(level=level - 1, menu_name='Банки', bank_id=bank_id, action="confirm_delete").pack()
     ))
 
     keyboard.add(InlineKeyboardButton(
-        text='Отмена',
+        text='🔙Отмена',
         callback_data=MenuCallBack(level=level, menu_name=bank_name, bank_id=bank_id).pack()
     ))
 
@@ -188,22 +188,22 @@ def get_user_assets_stockmarkets_btns(*, level: int, assets_stockmarkets: list, 
         ))
     if assets_stockmarkets:
         keyboard.add(InlineKeyboardButton(
-            text='Изменить финбиржу',
+            text='🔄Изменить финбиржу',
             callback_data=f'change_stockmarket:{stockmarket_id}'
         ))
 
         keyboard.add(InlineKeyboardButton(
-            text='Удалить финбиржу',
+            text='❌Удалить финбиржу',
             callback_data=MenuCallBack(level=level, menu_name='delete_stockmarket', stockmarket_id=stockmarket_id).pack()
         ))
 
     keyboard.add(InlineKeyboardButton(
-        text='Назад',
+        text='🔙Назад',
         callback_data=MenuCallBack(level=level - 1, menu_name='Финбиржи').pack()
     ))
 
     keyboard.add(InlineKeyboardButton(
-        text='Назад в главное меню',
+        text='🔙Назад в главное меню',
         callback_data=MenuCallBack(level=level - 3, menu_name='main').pack()
     ))
 
@@ -214,13 +214,13 @@ def get_confirm_delete_stockmarket(*, level: int, stockmarket_name: str, stockma
     keyboard = InlineKeyboardBuilder()
 
     keyboard.add(InlineKeyboardButton(
-        text='Да, удалить',
+        text='❌ДА, УДАЛИТЬ',
         callback_data=MenuCallBack(level=level - 1, menu_name='Финбиржи', stockmarket_id=stockmarket_id,
                                    action="confirm_delete").pack()
     ))
 
     keyboard.add(InlineKeyboardButton(
-        text="Отмена",
+        text="🔙Отмена",
         callback_data=MenuCallBack(level=level, menu_name=stockmarket_name, stockmarket_id=stockmarket_id).pack()
     ))
 
@@ -240,22 +240,22 @@ def get_user_assets_cryptomarkets_btns(*, level: int, assets_cryptomarkets: list
         ))
     if assets_cryptomarkets:
         keyboard.add(InlineKeyboardButton(
-            text='Изменить криптобиржу',
+            text='🔄Изменить криптобиржу',
             callback_data=f'change_cryptomarket:{cryptomarket_id}'
         ))
 
         keyboard.add(InlineKeyboardButton(
-            text='Удалить криптобиржу',
+            text='❌Удалить криптобиржу',
             callback_data=MenuCallBack(level=level, menu_name="delete_cryptomarket", cryptomarket_id=cryptomarket_id).pack()
         ))
 
     keyboard.add(InlineKeyboardButton(
-        text='Назад',
+        text='🔙Назад',
         callback_data=MenuCallBack(level=level - 1, menu_name='Криптобиржи').pack()
     ))
 
     keyboard.add(InlineKeyboardButton(
-        text='Назад в главное меню',
+        text='🔙Назад в главное меню',
         callback_data=MenuCallBack(level=level - 3, menu_name='main').pack()
     ))
 
@@ -266,13 +266,13 @@ def get_confirm_delete_cryptomarket(*, level: int, cryptomarket_name: str, crypt
     keyboard = InlineKeyboardBuilder()
 
     keyboard.add(InlineKeyboardButton(
-        text='Да, удалить',
+        text='❌ДА, УДАЛИТЬ',
         callback_data=MenuCallBack(level=level - 1, menu_name='Криптобиржи', cryptomarket_id=cryptomarket_id,
                                    action="confirm_delete").pack()
     ))
 
     keyboard.add(InlineKeyboardButton(
-        text='Отмена',
+        text='🔙Отмена',
         callback_data=MenuCallBack(level=level, menu_name=cryptomarket_name, cryptomarket_id=cryptomarket_id).pack()
     ))
 
@@ -313,26 +313,26 @@ def get_account_btns(
         keyboard.row(*row)
 
     keyboard.add(InlineKeyboardButton(
-        text='Добавить счет',
+        text='➕Добавить счет',
         callback_data=f'add_account:{bank_id}')
     )
     if account_id:
         keyboard.add(InlineKeyboardButton(
-            text='Изменить счет',
+            text='🔄Изменить счет',
             callback_data=f"change_account:{account_id}"
         ))
         keyboard.add(InlineKeyboardButton(
-            text='Удалить',
+            text='❌Удалить',
             callback_data=MenuCallBack(level=level, menu_name="delete_account", bank_id=bank_id, page=page).pack()
         ))
 
     keyboard.add(InlineKeyboardButton(
-        text='Назад',
+        text='🔙Назад',
         callback_data=MenuCallBack(level=level - 1, menu_name=bank_name, bank_id=bank_id).pack()
     ))
 
     keyboard.add(InlineKeyboardButton(
-        text='Назад в главное меню',
+        text='🔙Назад в главное меню',
         callback_data=MenuCallBack(level=level-4, menu_name='main').pack()
     ))
 
@@ -375,26 +375,26 @@ def get_currency_btns(
         keyboard.row(*row)
 
     keyboard.add(InlineKeyboardButton(
-        text='Добавить валюту',
+        text='➕Добавить валюту',
         callback_data=f'add_currency:{bank_id}')
     )
     if currency_id:
         keyboard.add(InlineKeyboardButton(
-            text='Изменить валюту',
+            text='🔄Изменить валюту',
             callback_data=f"change_currency:{currency_id}"
         ))
         keyboard.add(InlineKeyboardButton(
-            text='Удалить',
+            text='❌Удалить',
             callback_data=MenuCallBack(level=level, menu_name='delete_currency', bank_id=bank_id, page=page).pack()
         ))
 
     keyboard.add(InlineKeyboardButton(
-        text='Назад',
+        text='🔙Назад',
         callback_data=MenuCallBack(level=level - 1, menu_name=bank_name, bank_id=bank_id).pack()
     ))
 
     keyboard.add(InlineKeyboardButton(
-        text='Назад в главное меню',
+        text='🔙Назад в главное меню',
         callback_data=MenuCallBack(level=level - 4, menu_name='main').pack()
     ))
 
@@ -437,26 +437,26 @@ def get_deposit_btns(
         keyboard.row(*row)
 
     keyboard.add(InlineKeyboardButton(
-        text='Добавить вклад',
+        text='➕Добавить вклад',
         callback_data=f'add_deposit:{bank_id}')
     )
     if deposit_id:
         keyboard.add(InlineKeyboardButton(
-            text='Изменить вклад',
+            text='🔄Изменить вклад',
             callback_data=f"change_deposit:{deposit_id}"
         ))
         keyboard.add(InlineKeyboardButton(
-            text='Удалить',
+            text='❌Удалить',
             callback_data=MenuCallBack(level=level, menu_name='delete_deposit', bank_id=bank_id, page=page).pack()
         ))
 
     keyboard.add(InlineKeyboardButton(
-        text="Назад",
+        text="🔙Назад",
         callback_data=MenuCallBack(level=level - 1, menu_name=bank_name, bank_id=bank_id).pack()
     ))
 
     keyboard.add(InlineKeyboardButton(
-        text='Назад в главное меню',
+        text='🔙Назад в главное меню',
         callback_data=MenuCallBack(level=level - 4, menu_name='main').pack()
     ))
 
@@ -499,27 +499,27 @@ def get_cryptocurrencies_btns(
         keyboard.row(*row)
 
     keyboard.add(InlineKeyboardButton(
-        text='Добавить криптовалюту',
+        text='➕Добавить криптовалюту',
         callback_data=f'add_cryptocurrency:{cryptomarket_id}')
     )
     if cryptocurrency_id:
         keyboard.add(InlineKeyboardButton(
-            text='Изменить криптовалюту',
+            text='🔄Изменить криптовалюту',
             callback_data=f"change_cryptocurrency:{cryptocurrency_id}"
         ))
         keyboard.add(InlineKeyboardButton(
-            text='Удалить',
+            text='❌Удалить',
             callback_data=MenuCallBack(level=level, menu_name='delete_cryptocurrency', cryptomarket_id=cryptomarket_id,
                                        page=page).pack()
         ))
 
     keyboard.add(InlineKeyboardButton(
-        text='Назад',
+        text='🔙Назад',
         callback_data=MenuCallBack(level=level - 1, menu_name=cryptomarket_name, cryptomarket_id=cryptomarket_id).pack()
     ))
 
     keyboard.add(InlineKeyboardButton(
-        text='Назад в главное меню',
+        text='🔙Назад в главное меню',
         callback_data=MenuCallBack(level=level - 4, menu_name='main').pack()
     ))
 
@@ -562,27 +562,27 @@ def get_funds_btns(
         keyboard.row(*row)
 
     keyboard.add(InlineKeyboardButton(
-        text='Добавить фонд',
+        text='➕Добавить фонд',
         callback_data=f'add_fund:{stockmarket_id}')
     )
     if fund_id:
         keyboard.add(InlineKeyboardButton(
-            text='Изменить фонд',
+            text='🔄Изменить фонд',
             callback_data=f"change_fund:{fund_id}"
         ))
         keyboard.add(InlineKeyboardButton(
-            text='Удалить',
+            text='❌Удалить',
             callback_data=MenuCallBack(level=level, menu_name='delete_fund', stockmarket_id=stockmarket_id,
                                        page=page).pack()
         ))
 
     keyboard.add(InlineKeyboardButton(
-        text='Назад',
+        text='🔙Назад',
         callback_data=MenuCallBack(level=level - 1, menu_name=stockmarket_name, stockmarket_id=stockmarket_id).pack()
     ))
 
     keyboard.add(InlineKeyboardButton(
-        text='Назад в главное меню',
+        text='🔙Назад в главное меню',
         callback_data=MenuCallBack(level=level - 4, menu_name='main').pack()
     ))
 
@@ -625,27 +625,27 @@ def get_shares_btns(
         keyboard.row(*row)
 
     keyboard.add(InlineKeyboardButton(
-        text='Добавить акцию',
+        text='➕Добавить акцию',
         callback_data=f'add_share:{stockmarket_id}')
     )
     if share_id:
         keyboard.add(InlineKeyboardButton(
-            text='Изменить акцию',
+            text='🔄Изменить акцию',
             callback_data=f'change_share:{share_id}'
         ))
         keyboard.add(InlineKeyboardButton(
-            text='Удалить',
+            text='❌Удалить',
             callback_data=MenuCallBack(level=level, menu_name='delete_share', stockmarket_id=stockmarket_id,
                                        page=page).pack()
         ))
 
     keyboard.add(InlineKeyboardButton(
-        text='Назад',
+        text='🔙Назад',
         callback_data=MenuCallBack(level=level - 1, menu_name=stockmarket_name, stockmarket_id=stockmarket_id).pack()
     ))
 
     keyboard.add(InlineKeyboardButton(
-        text='Назад в главное меню',
+        text='🔙Назад в главное меню',
         callback_data=MenuCallBack(level=level - 4, menu_name='main').pack()
     ))
 
