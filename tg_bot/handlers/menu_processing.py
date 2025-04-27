@@ -1,3 +1,5 @@
+from datetime import datetime
+from decimal import Decimal
 from typing import Optional
 
 from aiogram.types import InputMediaPhoto
@@ -22,7 +24,8 @@ from database.orm_query import (
     orm_delete_fund,
     orm_get_share_by_stockmarket_id,
     orm_delete_share,
-    orm_get_stock_market_by_id, orm_delete_currency)
+    orm_get_stock_market_by_id,
+    orm_delete_currency)
 
 from dateutil.relativedelta import relativedelta
 
@@ -45,8 +48,8 @@ from tg_bot.keyboards.inline import (
     get_confirm_delete_bank,
     get_confirm_delete_stockmarket,
     get_confirm_delete_cryptomarket)
-from utils.cache_utils import get_cache_price
 
+from utils.cache_utils import get_cache_price
 from utils.paginator import Paginator
 
 
@@ -115,13 +118,15 @@ async def choose_banks(session, level, menu_name, bank_id):
     total_balance_currencies = bank_logic.get_total_balance_currencies_rubls()
     total_balance_deposits = bank_logic.get_total_balance_deposits_rubls()
 
-    caption = (f"В банке {bank.name} содержаться активы:\n"
-               f"Баланс на всех счетах: {total_balance_accounts}\n"
-               f"Баланс всех валютных счетов: {total_balance_currencies:.2f}\n"
-               f"Баланс всех вкладов: {total_balance_deposits:.2f}\n\n"
-               f"Общий баланс всех автивов банка:\n"
-               f"В рублях - {total_balance_rubls:.2f}\n"
-               f"В долларах - {total_balance_dollars:.2f}💲")
+    caption = (
+        f"<b>🏦 Банк: {bank.name}</b>\n\n"
+        f"<u>Балансы по счетам:</u>\n"
+        f"• Все счета: {total_balance_accounts:,.2f} ₽\n"
+        f"• Валютные счета: {total_balance_currencies:,.2f} $\n"
+        f"• Депозиты: {total_balance_deposits:,.2f} ₽\n\n"
+        f"<u>Итоговый баланс активов банка:</u>\n"
+        f"<b>→ В рублях: {total_balance_rubls:,.2f} ₽</b>\n"
+        f"<b>→ В долларах: {total_balance_dollars:,.2f} $</b>\n")
 
     assets_bank = ['Счета', 'Вклады', 'Валюты']
 
@@ -131,7 +136,10 @@ async def choose_banks(session, level, menu_name, bank_id):
 
 async def confirm_delete_bank(session, level, bank_id):
     bank = await orm_get_bank_by_id(session, bank_id)
-    caption = f"Вы уверены, что хотите удалить банк {bank.name}? Это действие необратимо."
+    caption = (
+        f"‼ Вы уверены, что хотите <b>удалить банк {bank.name}</b>?\n\n"
+        f"Все связанные счета и данные будут безвозвратно удалены.")
+
     kbds = get_confirm_delete_bank(level=level, bank_name=bank.name, bank_id=bank_id)
     return caption, kbds
 
@@ -141,11 +149,14 @@ async def choose_cryptomarkets(session, level, menu_name, cryptomarket_id):
     # image = InputMediaPhoto(media=banner.image, caption=banner.description)
     cryptomarket = await orm_get_cryptomarket_by_id(session, cryptomarket_id)
     cryptomarket_logic = cryptomarket.to_logic()
-    total_balance = cryptomarket_logic.get_total_balance_cryptomarket_in_dollars()
-    total_balance_rub = cryptomarket_logic.get_total_balance_cryptomarket_in_rubls()
-    caption = (f"На криптобирже {cryptomarket.name} содержаться активы:\n"
-               f"В долларах - {total_balance:.2f}💲\n"
-               f"В рублях - {total_balance_rub:.2f}")
+    total_balance_dollars = cryptomarket_logic.get_total_balance_cryptomarket_in_dollars()
+    total_balance_rubls = cryptomarket_logic.get_total_balance_cryptomarket_in_rubls()
+    caption = (
+        f"<b>💸🔒 Криптобиржа {cryptomarket.name}</b>\n\n"
+        f"<u>Общий баланс активов:</u>\n"
+        f"• <b>{total_balance_dollars:,.2f} $</b>\n"
+        f"• <b>{total_balance_rubls:,.2f} ₽</b>\n"
+    )
 
     assets_cryptomarkets = ['Криптовалюты']
 
@@ -156,7 +167,9 @@ async def choose_cryptomarkets(session, level, menu_name, cryptomarket_id):
 
 async def confirm_delete_stockmarket(session, level, stockmarket_id):
     stockmarket = await orm_get_stock_market_by_id(session, stockmarket_id)
-    caption = f"Вы уверены, что хотите удалить финбиржу {stockmarket.name}? Это действие необратимо."
+    caption = (
+        f"‼ Вы уверены, что хотите <b>удалить банк {stockmarket.name}</b>?\n\n"
+        f"Все связанные счета и данные будут безвозвратно удалены.")
     kbds = get_confirm_delete_stockmarket(level=level, stockmarket_name=stockmarket.name, stockmarket_id=stockmarket_id)
     return caption, kbds
 
@@ -169,9 +182,12 @@ async def choose_stockmarkets(session, level, menu_name, stockmarket_id):
     stockmarket_logic = stockmarket.to_logic()
     total_balance_dollars = stockmarket_logic.get_total_balance_stockmarket_in_dollars()
     total_balance_rubls = stockmarket_logic.get_total_balance_stockmarket_in_rubls()
-    caption = (f"На финбирже {stockmarket.name} содержаться активы:\n"
-               f"В долларах - {total_balance_dollars:.2f}💲\n"
-               f"В рублях - {total_balance_rubls:.2f}")
+    caption = (
+        f"<b>💸🔒 Фондовая биржа {stockmarket.name}</b>\n\n"
+        f"<u>Общий баланс активов:</u>\n"
+        f"• <b>{total_balance_dollars:,.2f} $</b>\n"
+        f"• <b>{total_balance_rubls:,.2f} ₽</b>\n"
+    )
 
     assets_stockmarkets = ['Акции', 'Фонды']
 
@@ -182,7 +198,9 @@ async def choose_stockmarkets(session, level, menu_name, stockmarket_id):
 
 async def confirm_delete_cryptomarket(session, level, cryptomarket_id):
     cryptomarket = await orm_get_cryptomarket_by_id(session, cryptomarket_id)
-    caption = f"Вы уверены, что хотите удалить криптобиржу {cryptomarket.name}? Это действие необратимо."
+    caption = (
+        f"‼ Вы уверены, что хотите <b>удалить банк {cryptomarket.name}</b>?\n\n"
+        f"Все связанные счета и данные будут безвозвратно удалены.")
     kbds = get_confirm_delete_cryptomarket(level=level, cryptomarket_name=cryptomarket.name, cryptomarket_id=cryptomarket_id)
     return caption, kbds
 
@@ -190,10 +208,10 @@ async def confirm_delete_cryptomarket(session, level, cryptomarket_id):
 def pages(paginator: Paginator):
     btns = dict()
     if paginator.has_previous():
-        btns['Пред.'] = "previous"
+        btns['⬅Пред.'] = "previous"
 
     if paginator.has_next():
-        btns['След.'] = "next"
+        btns['След.➡'] = "next"
 
     return btns
 
@@ -238,8 +256,11 @@ async def accounts(session, level, menu_name, bank_id, bank_name, page):
         return caption, kbds
 
     account = paginator.get_page()[0]
-    caption = (f"{account.name}\n\n"
-               f"Сумма на счете: {account.balance}")
+    caption = (
+        f"<b>💳 Счёт: {account.name}</b>\n\n"
+        f"<b>Доступный баланс:</b>\n"
+        f"{account.balance:,.2f} ₽"
+    )
 
     pagination_btns = pages(paginator)
 
@@ -297,9 +318,13 @@ async def currencies(session, level, menu_name, bank_id, bank_name, page):
 
     currency = paginator.get_page()[0]
     market_price = await get_cache_price("currency", currency.name, session)
-    caption = (f"{currency.name}\n\n"
-               f"Кол-во: {currency.balance} {currency.name}\n"
-               f"Сумма в рублях: {float(market_price)} x {float(currency.balance)} = {(float(market_price) * float(currency.balance)):.2f}")
+
+    caption = (
+        f"<b>💰 Валюта: {currency.name}</b>\n\n"
+        f"<b>Доступный баланс:</b>\n"
+        f"{currency.balance:,.2f} {currency.name}\n"
+        f"{float(market_price)} x {float(currency.balance)} = {(float(market_price) * float(currency.balance)):,.2f} ₽"
+    )
 
     pagination_btns = pages(paginator)
 
@@ -357,13 +382,20 @@ async def deposits(session, level, menu_name, bank_id, bank_name, page):
     deposit = paginator.get_page()[0]
     deposit_logic = DepositLogic(deposit.name, deposit.start_date, deposit.deposit_term, deposit.interest_rate, deposit.balance)
     final_amount = deposit_logic.calculating_final_amount(deposit_logic.deposit_balance, deposit_logic.deposit_term, deposit_logic.interest_rate)
+    income = Decimal(str(final_amount)) - Decimal(str(deposit.balance))
 
-    caption = (f"{deposit.name}\n\n"
-               f"Начало вклада: {deposit.start_date}\n"
-               f"Конец вклада: {deposit.start_date + relativedelta(months=deposit.deposit_term)}\n"
-               f"Сумма на вкладе: {deposit.balance}\n"
-               f"Процентная ставка: {deposit.interest_rate}\n"
-               f"Сумма в конце срока: {final_amount:.2f}")
+    caption = (
+        f"<b>🏦 {deposit.name}</b>\n\n"
+        f"<u>📅 Срок вклада:</u>\n"
+        f"• Начало: <code>{deposit.start_date}</code>\n"
+        f"• Окончание: <code>{deposit.start_date + relativedelta(months=deposit.deposit_term)}</code>\n\n"
+        f"<u>💰 Финансовые параметры:</u>\n"
+        f"• Сумма вклада: <code>{deposit.balance:,.2f}</code> ₽\n"
+        f"• Процентная ставка: <b>{deposit.interest_rate}%</b>\n\n"
+        f"<b>🏁 Итоговая сумма:</b>\n"
+        f"<code>{final_amount:,.2f}</code> ₽\n"
+        f"+{income:,.2f} ₽ доход"
+    )
 
     pagination_btns = pages(paginator)
 
@@ -422,15 +454,22 @@ async def cryptocurrencies(session, level, menu_name, cryptomarket_id, cryptomar
     market_price = await get_cache_price("crypto", cryptocurrency.name, session)
     current_value = float(market_price) * float(cryptocurrency.balance)
     initial_value = float(cryptocurrency.purchase_price) * float(cryptocurrency.balance)
+    price_change = Decimal(str(market_price)) - Decimal(str(cryptocurrency.purchase_price))
+    percentage_change = (price_change / Decimal(str(cryptocurrency.purchase_price))) * 100
 
-    caption = (f"{cryptocurrency.name}\n\n"
-               f"Цена покупки: {cryptocurrency.purchase_price} USD\n"
-               f"Актуальная цена: {market_price} USD\n"
-               f"Кол-во: {cryptocurrency.balance} {cryptocurrency.name}\n"
-               f"Сумма: {current_value:.2f} USD\n")
+    caption = (
+        f"<b> {cryptocurrency.name}</b>\n\n"
+        f"<u>💰 Цены:</u>\n"
+        f"• Куплено по: <code>{cryptocurrency.purchase_price:,.4f} $</code>\n"
+        f"• Текущая цена: <code>{market_price:,.4f} $</code>\n"
+        f"• Изменение: <b>{price_change:+,.4f} USD</b> ({percentage_change:+.2f}%)\n\n"
+        f"<u>🔢 Позиция:</u>\n"
+        f"• Количество: <code>{Decimal(cryptocurrency.balance):,.8f}</code>\n"
+        f"• Текущая стоимость: <code>{Decimal(current_value):,.2f} $</code>\n"
+    )
 
     change = current_value - initial_value
-    caption += f"Доход: {'+' if change >= 0 else '-'}{abs(change):.2f} USD"
+    caption += f"<b>Доход: {'🟢+' if change >= 0 else '🔴-'}{abs(change):.2f} $</b>"
 
     pagination_btns = pages(paginator)
 
@@ -489,15 +528,22 @@ async def funds(session, level, menu_name, stockmarket_id, stockmarket_name, pag
     market_price = await get_cache_price("fund", fund.name, session)
     current_value = float(market_price) * float(fund.quantity)
     initial_value = float(fund.purchase_price) * float(fund.quantity)
+    price_change = Decimal(str(market_price)) - Decimal(str(fund.purchase_price))
+    percentage_change = (price_change / Decimal(str(fund.purchase_price))) * 100
 
-    caption = (f"{fund.name}\n\n"
-               f"Цена покупки: {fund.purchase_price} {fund.currency}\n"
-               f"Актуальная цена: {market_price} {fund.currency}\n"
-               f"Кол-во: {fund.quantity}\n"
-               f"Сумма: {current_value:.2f} {fund.currency}\n ")
+    caption = (
+        f"<b> {fund.name}</b>\n\n"
+        f"<u>💰 Цены:</u>\n"
+        f"• Куплено по: <code>{fund.purchase_price:,.4f} {fund.currency}</code>\n"
+        f"• Текущая цена: <code>{market_price:,.4f} {fund.currency}</code>\n"
+        f"• Изменение: <b>{price_change:+,.2f} {fund.currency}</b> ({percentage_change:+.2f}%)\n\n"
+        f"<u>🔢 Позиция:</u>\n"
+        f"• Количество: <code>{Decimal(fund.quantity):,.2f}</code>\n"
+        f"• Текущая стоимость: <code>{Decimal(current_value):,.2f} {fund.currency}</code>\n"
+    )
 
     change = current_value - initial_value
-    caption += f"Доход: {'+' if change >= 0 else '-'}{abs(change):.2f} {fund.currency}"
+    caption += f"<b>Доход: {'🟢+' if change >= 0 else '🔴-'}{abs(change):.2f} {fund.currency}</b>"
 
     pagination_btns = pages(paginator)
 
@@ -557,14 +603,28 @@ async def shares(session, level, menu_name, stockmarket_id, stockmarket_name, pa
     current_value = float(market_price) * float(share.quantity)
     initial_value = float(share.purchase_price) * float(share.quantity)
 
-    caption = (f"{share.name}\n\n"
-               f"Цена покупки: {share.purchase_price} {share.currency}\n"
-               f"Актуальная цена: {market_price} {share.currency}\n"
-               f"Кол-во: {share.quantity}\n"
-               f"Сумма: {current_value:.2f} {share.currency}\n")
+    # caption = (f"{share.name}\n\n"
+    #            f"Цена покупки: {share.purchase_price} {share.currency}\n"
+    #            f"Актуальная цена: {market_price} {share.currency}\n"
+    #            f"Кол-во: {share.quantity}\n"
+    #            f"Сумма: {current_value:.2f} {share.currency}\n")
+
+    price_change = Decimal(str(market_price)) - Decimal(str(share.purchase_price))
+    percentage_change = (price_change / Decimal(str(share.purchase_price))) * 100
+
+    caption = (
+        f"<b> {share.name}</b>\n\n"
+        f"<u>💰 Цены:</u>\n"
+        f"• Куплено по: <code>{share.purchase_price:,.4f} {share.currency}</code>\n"
+        f"• Текущая цена: <code>{market_price:,.4f} {share.currency}</code>\n"
+        f"• Изменение: <b>{price_change:+,.2f} {share.currency}</b> ({percentage_change:+.2f}%)\n\n"
+        f"<u>🔢 Позиция:</u>\n"
+        f"• Количество: <code>{Decimal(share.quantity):,.2f}</code>\n"
+        f"• Текущая стоимость: <code>{Decimal(current_value):,.2f} {share.currency}</code>\n"
+    )
 
     change = current_value - initial_value
-    caption += f"Доход: {'+' if change >= 0 else '-'}{abs(change):.2f} {share.currency}"
+    caption += f"<b>Доход: {'🟢+' if change >= 0 else '🔴-'}{abs(change):.2f} {share.currency}</b>"
 
 
     pagination_btns = pages(paginator)
