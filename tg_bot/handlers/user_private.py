@@ -1,5 +1,3 @@
-from decimal import Decimal
-
 from aiogram import types, Router
 from aiogram.filters import CommandStart, Command
 from aiogram.types import CallbackQuery, InputMediaPhoto, Message
