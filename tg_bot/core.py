@@ -7,6 +7,6 @@ from aiogram.enums import ParseMode
 from dotenv import find_dotenv, load_dotenv
 load_dotenv(find_dotenv())
 
-bot = Bot(token=os.getenv('TOKEN'), default=DefaultBotProperties(parse_mode= ParseMode.HTML))
+bot = Bot(token=os.getenv('TOKEN'), default=DefaultBotProperties(parse_mode=ParseMode.HTML))
 
 dp = Dispatcher()
