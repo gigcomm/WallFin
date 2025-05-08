@@ -70,6 +70,7 @@ async def add_cryptomarket(callback_query: CallbackQuery, state: FSMContext):
     await state.update_data(stockmarket_id=stockmarket_id)
 
     keyboard_message = await callback_query.message.answer("Заполните данные:", reply_markup=SHARE_CANCEL_FSM)
+
     bot_message = await callback_query.message.answer("Введите тикер акции, например: SBER, AAPL...")
     await state.update_data(keyboard_message_id=[keyboard_message.message_id], message_ids=[bot_message.message_id])
 
@@ -127,6 +128,7 @@ async def add_name(message: types.Message, state: FSMContext, session: AsyncSess
     user_id = await orm_get_user(session, user_tg_id)
 
     data = await state.get_data()
+    stockmarket_id = data['stockmarket_id']
     await delete_regular_messages(data, message)
 
     if message.text == '.' and AddShare.share_for_change:
@@ -143,7 +145,7 @@ async def add_name(message: types.Message, state: FSMContext, session: AsyncSess
             if AddShare.share_for_change and AddShare.share_for_change.name == name:
                 await state.update_data(name=name.upper())
             else:
-                check_name = await check_existing_share(session, name, user_id)
+                check_name = await check_existing_share(session, name, user_id, stockmarket_id)
                 if check_name:
                     raise ValueError(f"Акция с именем '{name}' уже существует")
 
@@ -173,6 +175,13 @@ async def add_purchase_price(message: types.Message, state: FSMContext):
             if len(message.text) > 20:
                 bot_message = await message.answer(
                     "Количество символов для цены покупки акции не должно превышать 20 символов.\nВведите заново")
+                await state.update_data(message_ids=[message.message_id, bot_message.message_id])
+                return
+
+            value = float(message.text)
+            if value == 0:
+                bot_message = await message.answer(
+                    "Цена покупки акции не должна быть равная 0.\nВведите заново")
                 await state.update_data(message_ids=[message.message_id, bot_message.message_id])
                 return
 
