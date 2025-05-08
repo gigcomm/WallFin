@@ -207,9 +207,10 @@ async def orm_add_account(session: AsyncSession, data: dict):
     await session.commit()
 
 
-async def check_existing_account(session: AsyncSession, name: str, user_id: int):
+async def check_existing_account(session: AsyncSession, name: str, user_id: int, bank_id: int):
     result = await session.execute(
         select(Account.name).join(Bank, Bank.id == Account.bank_id).where(Account.name == name,
+                                                                          Account.bank_id == bank_id,
                                                                           Bank.user_id == user_id))
     return result.scalar_one_or_none()
 
@@ -250,9 +251,10 @@ async def orm_add_currency(session: AsyncSession, data: dict):
     await session.commit()
 
 
-async def check_existing_currency(session: AsyncSession, name: str, user_id: int):
+async def check_existing_currency(session: AsyncSession, name: str, user_id: int, bank_id: int):
     result = await session.execute(
         select(Currency.name).join(Bank, Bank.id == Currency.bank_id).where(Currency.name == name,
+                                                                            Currency.bank_id == bank_id,
                                                                             Bank.user_id == user_id))
     return result.scalar_one_or_none()
 
@@ -273,7 +275,7 @@ async def orm_get_currency_all(session: AsyncSession):
 
 
 async def orm_get_currency_name(session: AsyncSession, name: str):
-    result = await session.execute(select(Currency).where(Currency.name==name))
+    result = await session.execute(select(Currency).where(Currency.name == name))
     return result.scalars().first()
 
 
@@ -306,9 +308,10 @@ async def orm_add_deposit(session: AsyncSession, data: dict):
     await session.commit()
 
 
-async def check_existing_deposit(session: AsyncSession, name: str, user_id: int):
+async def check_existing_deposit(session: AsyncSession, name: str, user_id: int, bank_id: int):
     result = await session.execute(
         select(Deposit.name).join(Bank, Bank.id == Deposit.bank_id).where(Deposit.name == name,
+                                                                          Deposit.bank_id == bank_id,
                                                                           Bank.user_id == user_id))
     return result.scalar_one_or_none()
 
@@ -356,9 +359,10 @@ async def orm_add_share(session: AsyncSession, data: dict):
     await session.commit()
 
 
-async def check_existing_share(session: AsyncSession, name: str, user_id: int):
+async def check_existing_share(session: AsyncSession, name: str, user_id: int, stockmarket_id: int):
     result = await session.execute(
         select(Share.name).join(StockMarket, StockMarket.id == Share.stockmarket_id).where(Share.name == name,
+                                                                                           Share.stockmarket_id == stockmarket_id,
                                                                                            StockMarket.user_id == user_id))
     return result.scalar_one_or_none()
 
@@ -379,7 +383,7 @@ async def orm_get_share_all(session: AsyncSession):
 
 
 async def orm_get_share_name(session: AsyncSession, name: str):
-    result = await session.execute(select(Share).where(Share.name==name))
+    result = await session.execute(select(Share).where(Share.name == name))
     return result.scalars().first()
 
 
@@ -416,9 +420,10 @@ async def orm_add_fund(session: AsyncSession, data: dict):
     await session.commit()
 
 
-async def check_existing_fund(session: AsyncSession, name: str, user_id: int):
+async def check_existing_fund(session: AsyncSession, name: str, user_id: int, stockmarket_id: int):
     result = await session.execute(
         select(Fund.name).join(StockMarket, StockMarket.id == Fund.stockmarket_id).where(Fund.name == name,
+                                                                                         Fund.stockmarket_id == stockmarket_id,
                                                                                          StockMarket.user_id == user_id))
     return result.scalar_one_or_none()
 
@@ -475,10 +480,11 @@ async def orm_add_cryptocurrency(session: AsyncSession, data: dict):
     await session.commit()
 
 
-async def check_existing_cryptocurrency(session: AsyncSession, name: str, user_id: int):
+async def check_existing_cryptocurrency(session: AsyncSession, name: str, user_id: int, cryptomarket_id: int):
     result = await session.execute(
         select(Cryptocurrency.name).join(CryptoMarket, CryptoMarket.id == Cryptocurrency.cryptomarket_id).where(
-            Cryptocurrency.name == name, CryptoMarket.user_id == user_id))
+            Cryptocurrency.name == name, Cryptocurrency.cryptomarket_id == cryptomarket_id,
+            CryptoMarket.user_id == user_id))
     return result.scalar_one_or_none()
 
 
