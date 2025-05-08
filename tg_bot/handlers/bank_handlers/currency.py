@@ -130,6 +130,7 @@ async def add_name(message: types.Message, state: FSMContext, session: AsyncSess
     user_id = await orm_get_user(session, user_tg_id)
 
     data = await state.get_data()
+    bank_id = data['bank_id']
     await delete_regular_messages(data, message)
 
     if message.text == '.' and AddCurrency.currency_for_change:
@@ -146,7 +147,7 @@ async def add_name(message: types.Message, state: FSMContext, session: AsyncSess
             if AddCurrency.currency_for_change and AddCurrency.currency_for_change.name == name:
                 await state.update_data(name=name)
             else:
-                check_name = await check_existing_currency(session, name, user_id)
+                check_name = await check_existing_currency(session, name, user_id, bank_id)
                 if check_name:
                     raise ValueError(f"Валюта с именем '{name}' уже существует")
 

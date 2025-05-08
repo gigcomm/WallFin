@@ -120,6 +120,7 @@ async def add_name(message: types.Message, state: FSMContext, session: AsyncSess
     user_id = await orm_get_user(session, user_tg_id)
 
     data = await state.get_data()
+    bank_id = data['bank_id']
     await delete_regular_messages(data, message)
 
     if message.text == '.' and AddAccount.account_for_change:
@@ -135,7 +136,7 @@ async def add_name(message: types.Message, state: FSMContext, session: AsyncSess
             if AddAccount.account_for_change and AddAccount.account_for_change.name == name:
                 await state.update_data(name=name)
             else:
-                check_name = await check_existing_account(session, name, user_id)
+                check_name = await check_existing_account(session, name, user_id, bank_id)
                 if check_name:
                     raise ValueError(f"Счет с именем '{name}' уже существует")
 
@@ -150,7 +151,7 @@ async def add_name(message: types.Message, state: FSMContext, session: AsyncSess
     data = await state.get_data()
     account_name = data['name']
 
-    bot_message = await message.answer(f"Введите количество денег на балансе счета {account_name}")
+    bot_message = await message.answer(f'Введите баланс счета <b>"{account_name}"</b>')
     await state.update_data(message_ids=[message.message_id, bot_message.message_id])
 
     await state.set_state(AddAccount.balance)
