@@ -65,7 +65,7 @@ class Currency(Base):
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     name: Mapped[str] = mapped_column(String(3), nullable=False)
     balance: Mapped[float] = mapped_column(DECIMAL(20, 2), nullable=False, default=0.0)
-    market_price: Mapped[float] = mapped_column(DECIMAL(10, 2), nullable=False, default=0.0)
+    market_price: Mapped[float] = mapped_column(DECIMAL(10, 4), nullable=False, default=0.0)
     bank_id: Mapped[int] = mapped_column(ForeignKey("bank.id", ondelete="CASCADE"), nullable=False)
 
     bank: Mapped["Bank"] = relationship(back_populates='currency')
@@ -78,7 +78,7 @@ class Deposit(Base):
     start_date: Mapped[Date] = mapped_column(Date, nullable=False)
     deposit_term: Mapped[int] = mapped_column(Integer, nullable=False)
     interest_rate: Mapped[float] = mapped_column(Float, nullable=False)
-    balance: Mapped[float] = mapped_column(DECIMAL(20, 2), nullable=False, default=0.0)
+    balance: Mapped[float] = mapped_column(DECIMAL(20, 4), nullable=False, default=0.0)
     bank_id: Mapped[int] = mapped_column(ForeignKey("bank.id", ondelete="CASCADE"), nullable=False)
 
     bank: Mapped["Bank"] = relationship(back_populates='deposit')
@@ -123,9 +123,9 @@ class Fund(Base):
     __tablename__ = 'fund'
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     name: Mapped[str] = mapped_column(String(50), nullable=False)
-    purchase_price: Mapped[float] = mapped_column(DECIMAL(20, 2), nullable=False)
-    selling_price: Mapped[float] = mapped_column(DECIMAL(20, 2), nullable=False)
-    market_price: Mapped[float] = mapped_column(DECIMAL(10, 2), nullable=False)
+    purchase_price: Mapped[float] = mapped_column(DECIMAL(20, 6), nullable=False)
+    selling_price: Mapped[float] = mapped_column(DECIMAL(20, 6), nullable=False)
+    market_price: Mapped[float] = mapped_column(DECIMAL(10, 6), nullable=False)
     quantity: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     currency: Mapped[str] = mapped_column(String, nullable=False)
     stockmarket_id: Mapped[int] = mapped_column(ForeignKey("stockmarket.id", ondelete="CASCADE"), nullable=False)
@@ -157,7 +157,7 @@ class Cryptocurrency(Base):
     balance: Mapped[float] = mapped_column(DECIMAL(20, 8), nullable=False, default=0.0)
     purchase_price: Mapped[float] = mapped_column(DECIMAL(20, 8), nullable=False)
     selling_price: Mapped[float] = mapped_column(DECIMAL(20, 8), nullable=False)
-    market_price: Mapped[float] = mapped_column(DECIMAL(10, 2), nullable=False)
+    market_price: Mapped[float] = mapped_column(DECIMAL(16, 8), nullable=False)
     cryptomarket_id: Mapped[int] = mapped_column(ForeignKey("cryptomarket.id", ondelete="CASCADE"), nullable=False)
 
     cryptomarket: Mapped["CryptoMarket"] = relationship(back_populates="cryptocurrency")
