@@ -127,6 +127,7 @@ async def add_name(message: types.Message, state: FSMContext, session: AsyncSess
     user_id = await orm_get_user(session, user_tg_id)
 
     data = await state.get_data()
+    cryptomarket_id = data['cryptomarket_id']
     await delete_regular_messages(data, message)
 
     if message.text == '.' and AddСryptocurrency.cryptocurrency_for_change:
@@ -143,7 +144,7 @@ async def add_name(message: types.Message, state: FSMContext, session: AsyncSess
             if AddСryptocurrency.cryptocurrency_for_change and AddСryptocurrency.cryptocurrency_for_change.name == name:
                 await state.update_data(name=name.upper())
             else:
-                check_name = await check_existing_cryptocurrency(session, name, user_id)
+                check_name = await check_existing_cryptocurrency(session, name, user_id, cryptomarket_id)
                 if check_name:
                     raise ValueError(f"Криптовалюта с именем '{name}' уже существует")
 
@@ -204,6 +205,13 @@ async def add_purchase_price(message: types.Message, state: FSMContext):
             if len(message.text) > 20:
                 bot_message = await message.answer(
                     "Количество символов цены покупки криптовалюты не должно превышать 20 символов.\nВведите заново")
+                await state.update_data(message_ids=[message.message_id, bot_message.message_id])
+                return
+
+            value = float(message.text)
+            if value == 0:
+                bot_message = await message.answer(
+                    "Цена покупки криптовалюты не должна быть равная 0.\nВведите заново")
                 await state.update_data(message_ids=[message.message_id, bot_message.message_id])
                 return
 
@@ -303,9 +311,9 @@ async def add_market_price(message: types.Message, state: FSMContext, session: A
                 return
         else:
             try:
-                if len(message.text) > 10:
+                if len(message.text) > 16:
                     bot_message = await message.answer(
-                        "Количество символов для рыночной цены криптовалюты не должно превышать 10 символов.\nВведите заново")
+                        "Количество символов для рыночной цены криптовалюты не должно превышать 16 символов.\nВведите заново")
                     await state.update_data(message_ids=[message.message_id, bot_message.message_id])
                     return
 
