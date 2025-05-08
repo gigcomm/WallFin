@@ -56,8 +56,8 @@ async def change_deposit(callback_query: types.CallbackQuery, state: FSMContext,
     keyboard_message = await callback_query.message.answer("В режиме изменения, если поставить точку, данное поле будет прежним,"
         "а процесс перейдет к следующему полю объекта.\nИзмените данные:",
         reply_markup=DEPOSIT_CANCEL_AND_BACK_FSM)
-
     bot_message = await callback_query.message.answer("Введите название вклада:")
+
     await state.update_data(keyboard_message_id=[keyboard_message.message_id], message_ids=[bot_message.message_id])
 
     await state.set_state(AddDeposit.name)
@@ -69,9 +69,9 @@ async def add_deposit(callback_query: CallbackQuery, state: FSMContext):
     bank_id = int(callback_query.data.split(':')[-1])
     await state.update_data(bank_id=bank_id)
 
-    keyboard_message = await callback_query.message.answer("Заполните данные:")
+    keyboard_message = await callback_query.message.answer("Заполните данные:", reply_markup=DEPOSIT_CANCEL_FSM)
 
-    bot_message = await callback_query.message.answer("Введите название вклада", reply_markup=DEPOSIT_CANCEL_FSM)
+    bot_message = await callback_query.message.answer("Введите название вклада")
     await state.update_data(keyboard_message_id=[keyboard_message.message_id], message_ids=[bot_message.message_id])
 
     await state.set_state(AddDeposit.name)
@@ -115,7 +115,7 @@ async def back_handler(message: types.Message, state: FSMContext) -> None:
     for step in AddDeposit.__all_states__:
         if step.state == current_state:
             await state.set_state(previous)
-            bot_message = await message.answer(f"Вы вернулись к прошлому шагу \n {AddDeposit.texts[previous.state]}")
+            bot_message = await message.answer(f"Вы вернулись к прошлому шагу\n {AddDeposit.texts[previous.state]}")
             await state.update_data(message_ids=[message.message_id, bot_message.message_id])
             return
         previous = step
@@ -128,6 +128,7 @@ async def add_name(message: types.Message, state: FSMContext, session: AsyncSess
     user_id = await orm_get_user(session, user_tg_id)
 
     data = await state.get_data()
+    bank_id = data['bank_id']
     await delete_regular_messages(data, message)
 
     if message.text == '.' and AddDeposit.deposit_for_change:
@@ -144,7 +145,7 @@ async def add_name(message: types.Message, state: FSMContext, session: AsyncSess
             if AddDeposit.deposit_for_change and AddDeposit.deposit_for_change.name == name:
                 await state.update_data(name=name)
             else:
-                check_name = await check_existing_deposit(session, name, user_id)
+                check_name = await check_existing_deposit(session, name, user_id, bank_id)
                 if check_name:
                     raise ValueError(f"Вклад с именем '{name}' уже существует")
 
