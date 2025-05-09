@@ -47,8 +47,9 @@ class AddDeposit(StatesGroup):
 @deposit_router.callback_query(StateFilter(None), F.data.startswith("change_deposit"))
 async def change_deposit(callback_query: types.CallbackQuery, state: FSMContext, session: AsyncSession):
     logger.info(f"Пользователь {callback_query.from_user.id} начал изменение вклада.")
-    deposit_id = int(callback_query.data.split(":")[-1])
-    await state.update_data(deposit_id=deposit_id)
+    deposit_id = int(callback_query.data.split(":")[-2])
+    bank_id = int(callback_query.data.split(":")[-1])
+    await state.update_data(deposit_id=deposit_id, bank_id=bank_id)
     deposit_for_change = await orm_get_deposit(session, deposit_id)
 
     AddDeposit.deposit_for_change = deposit_for_change
@@ -157,7 +158,10 @@ async def add_name(message: types.Message, state: FSMContext, session: AsyncSess
             await state.update_data(message_ids=[message.message_id, bot_message.message_id])
             return
 
-    bot_message = await message.answer("Введите дату начала вклада в формате ДД.ММ.ГГ.")
+    data = await state.get_data()
+    deposit_name = data['name']
+
+    bot_message = await message.answer(f'Введите дату начала вклада <b>"{deposit_name}"</b>в формате ДД.ММ.ГГ.')
     await state.update_data(message_ids=[message.message_id, bot_message.message_id])
 
     await state.set_state(AddDeposit.start_date)

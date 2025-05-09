@@ -47,8 +47,9 @@ class AddCurrency(StatesGroup):
 @currency_router.callback_query(StateFilter(None), F.data.startswith("change_currency"))
 async def change_currency(callback_query: CallbackQuery, state: FSMContext, session: AsyncSession):
     logger.info(f"Пользователь {callback_query.from_user.id} начал изменение валюты.")
-    currency_id = int(callback_query.data.split(":")[-1])
-    await state.update_data(currency_id=currency_id)
+    currency_id = int(callback_query.data.split(":")[-2])
+    bank_id = int(callback_query.data.split(":")[-1])
+    await state.update_data(currency_id=currency_id, bank_id=bank_id)
     currency_for_change = await orm_get_currency(session, currency_id)
 
     AddCurrency.currency_for_change = currency_for_change
@@ -162,7 +163,7 @@ async def add_name(message: types.Message, state: FSMContext, session: AsyncSess
     data = await state.get_data()
     currency_name = data['name']
 
-    bot_message = await message.answer(f"Введите количество валюты {currency_name} на балансе")
+    bot_message = await message.answer(f'Введите количество валюты <b>"{currency_name}"</b> на балансе')
     await state.update_data(message_ids=[message.message_id, bot_message.message_id])
 
     await state.set_state(AddCurrency.balance)

@@ -38,8 +38,9 @@ class AddAccount(StatesGroup):
 @account_router.callback_query(StateFilter(None), F.data.startswith('change_account'))
 async def change_account(callback_query: CallbackQuery, state: FSMContext, session: AsyncSession):
     logger.info(f"Пользователь {callback_query.from_user.id} начал изменение счета.")
-    account_id = int(callback_query.data.split(":")[-1])
-    await state.update_data(account_id=account_id)
+    account_id = int(callback_query.data.split(":")[-2])
+    bank_id = int(callback_query.data.split(":")[-1])
+    await state.update_data(account_id=account_id, bank_id=bank_id)
     account_for_change = await orm_get_account(session, account_id)
 
     AddAccount.account_for_change = account_for_change
@@ -62,6 +63,7 @@ async def add_account(callback_query: CallbackQuery, state: FSMContext):
     await state.update_data(bank_id=bank_id, message_ids=[], keyboard_message_id=[])
 
     keyboard_message = await callback_query.message.answer("Заполните данные:", reply_markup=ACCOUNT_CANCEL_FSM)
+
     bot_message = await callback_query.message.answer("Введите название счета")
     await state.update_data(keyboard_message_id=[keyboard_message.message_id], message_ids=[bot_message.message_id])
 
@@ -145,7 +147,7 @@ async def add_name(message: types.Message, state: FSMContext, session: AsyncSess
         except ValueError as e:
             logger.error(f"Ошибка при вводе названия счета: {e}")
             bot_message = await message.answer("Ошибка. Пожалуйста, введите другое название:")
-            await state.update_data(message_ids=[bot_message.message_id])
+            await state.update_data(message_ids=[bot_message.message_id, message.message_id])
             return
 
     data = await state.get_data()
