@@ -319,7 +319,7 @@ def get_account_btns(
     if account_id:
         keyboard.add(InlineKeyboardButton(
             text='🔄Изменить счет',
-            callback_data=f"change_account:{account_id}"
+            callback_data=f"change_account:{account_id}:{bank_id}"
         ))
         keyboard.add(InlineKeyboardButton(
             text='❌Удалить',
@@ -381,7 +381,7 @@ def get_currency_btns(
     if currency_id:
         keyboard.add(InlineKeyboardButton(
             text='🔄Изменить валюту',
-            callback_data=f"change_currency:{currency_id}"
+            callback_data=f"change_currency:{currency_id}:{bank_id}"
         ))
         keyboard.add(InlineKeyboardButton(
             text='❌Удалить',
@@ -443,7 +443,7 @@ def get_deposit_btns(
     if deposit_id:
         keyboard.add(InlineKeyboardButton(
             text='🔄Изменить вклад',
-            callback_data=f"change_deposit:{deposit_id}"
+            callback_data=f"change_deposit:{deposit_id}:{bank_id}"
         ))
         keyboard.add(InlineKeyboardButton(
             text='❌Удалить',
@@ -505,7 +505,7 @@ def get_cryptocurrencies_btns(
     if cryptocurrency_id:
         keyboard.add(InlineKeyboardButton(
             text='🔄Изменить криптовалюту',
-            callback_data=f"change_cryptocurrency:{cryptocurrency_id}"
+            callback_data=f"change_cryptocurrency:{cryptocurrency_id}:{cryptomarket_id}"
         ))
         keyboard.add(InlineKeyboardButton(
             text='❌Удалить',
@@ -568,7 +568,7 @@ def get_funds_btns(
     if fund_id:
         keyboard.add(InlineKeyboardButton(
             text='🔄Изменить фонд',
-            callback_data=f"change_fund:{fund_id}"
+            callback_data=f"change_fund:{fund_id}:{stockmarket_id}"
         ))
         keyboard.add(InlineKeyboardButton(
             text='❌Удалить',
@@ -631,7 +631,7 @@ def get_shares_btns(
     if share_id:
         keyboard.add(InlineKeyboardButton(
             text='🔄Изменить акцию',
-            callback_data=f'change_share:{share_id}'
+            callback_data=f'change_share:{share_id}:{stockmarket_id}'
         ))
         keyboard.add(InlineKeyboardButton(
             text='❌Удалить',
