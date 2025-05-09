@@ -48,8 +48,9 @@ class AddСryptocurrency(StatesGroup):
 @cryptocurrency_router.callback_query(StateFilter(None), F.data.startswith("change_cryptocurrency"))
 async def change_cryptocurrency(callback_query: CallbackQuery, state: FSMContext, session: AsyncSession):
     logger.info(f"Пользователь {callback_query.from_user.id} начал изменение криптовалюты.")
-    cryptocurrency_id = int(callback_query.data.split(":")[-1])
-    await state.update_data(cryptocurrency_id=cryptocurrency_id)
+    cryptocurrency_id = int(callback_query.data.split(":")[-2])
+    cryptomarket_id = int(callback_query.data.split(":")[-1])
+    await state.update_data(cryptocurrency_id=cryptocurrency_id, cryptomarket_id=cryptomarket_id)
     cryptocurrency_for_change = await orm_get_cryptocurrency(session, cryptocurrency_id)
     AddСryptocurrency.cryptocurrency_for_change = cryptocurrency_for_change
 
@@ -156,7 +157,10 @@ async def add_name(message: types.Message, state: FSMContext, session: AsyncSess
             await state.update_data(message_ids=[message.message_id, bot_message.message_id])
             return
 
-    bot_message = await message.answer("Введите количество криптовалюты")
+    data = await state.get_data()
+    cryptocurrency_name = data['name']
+
+    bot_message = await message.answer(f'Введите количество криптовалюты<b>{cryptocurrency_name}</b>')
     await state.update_data(message_ids=[message.message_id, bot_message.message_id])
 
     await state.set_state(AddСryptocurrency.balance)

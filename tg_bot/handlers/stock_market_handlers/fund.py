@@ -47,8 +47,9 @@ class AddFund(StatesGroup):
 @fund_router.callback_query(StateFilter(None), F.data.startswith('change_fund'))
 async def change_fund(callback_query: types.CallbackQuery, state: FSMContext, session: AsyncSession):
     logger.info(f"Пользователь {callback_query.from_user.id} начал изменение фонда.")
-    fund_id = int(callback_query.data.split(":")[-1])
-    await state.update_data(fund_id=fund_id)
+    fund_id = int(callback_query.data.split(":")[-2])
+    stockmarket_id = int(callback_query.data.split(":")[-1])
+    await state.update_data(fund_id=fund_id, stockmarket_id=stockmarket_id)
     fund_for_change = await orm_get_fund(session, fund_id)
     AddFund.fund_for_change = fund_for_change
 
@@ -151,10 +152,14 @@ async def add_name(message: types.Message, state: FSMContext, session: AsyncSess
 
         except ValueError as e:
             logger.error(f"Ошибка при вводе названия фонда: {e}")
-            await message.answer("Ошибка. Пожалуйста, введите другое название:")
+            bot_message = await message.answer("Ошибка. Пожалуйста, введите другое название:")
+            await state.update_data(message_ids=[message.message_id, bot_message.message_id])
             return
 
-    bot_message = await message.answer("Введите цену покупки фонда")
+    data = await state.get_data()
+    fund_name = data['name']
+
+    bot_message = await message.answer(f'Введите цену покупки фонда <b>"{fund_name}"</b>')
     await state.update_data(message_ids=[message.message_id, bot_message.message_id])
 
     await state.set_state(AddFund.purchase_price)

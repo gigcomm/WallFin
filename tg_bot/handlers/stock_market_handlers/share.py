@@ -48,15 +48,17 @@ class AddShare(StatesGroup):
 @share_router.callback_query(StateFilter(None), F.data.startswith('change_share'))
 async def change_share(callback_query: CallbackQuery, state: FSMContext, session: AsyncSession):
     logger.info(f"Пользователь {callback_query.from_user.id} начал изменение акции.")
-    share_id = int(callback_query.data.split(":")[-1])
-    await state.update_data(share_id=share_id)
+    share_id = int(callback_query.data.split(":")[-2])
+    stockmarket_id = int(callback_query.data.split(":")[-1])
+    await state.update_data(share_id=share_id, stockmarket_id=stockmarket_id)
     share_for_change = await orm_get_share(session, share_id)
+
     AddShare.share_for_change = share_for_change
 
     keyboard_message = await callback_query.message.answer("В режиме изменения, если поставить точку, данное поле будет прежним,"
         "а процесс перейдет к следующему полю объекта.\nИзмените данные:",
         reply_markup=SHARE_CANCEL_AND_BACK_FSM)
-    bot_message = await callback_query.message.answer("Введите тикер акции, например: SBER, AAPL...", reply_markup=SHARE_CANCEL_AND_BACK_FSM)
+    bot_message = await callback_query.message.answer("Введите тикер акции, например: SBER, AAPL...")
 
     await state.update_data(keyboard_message_id=[keyboard_message.message_id], message_ids=[bot_message.message_id])
 
@@ -153,10 +155,14 @@ async def add_name(message: types.Message, state: FSMContext, session: AsyncSess
 
         except ValueError as e:
             logger.error(f"Ошибка при вводе названия акции: {e}")
-            await message.answer("Ошибка. Пожалуйста, введите другое название:")
+            bot_message = await message.answer("Ошибка. Пожалуйста, введите другое название:")
+            await state.update_data(message_ids=[message.message_id, bot_message.message_id])
             return
 
-    bot_message = await message.answer("Введите цену покупки акции")
+    data = await state.get_data()
+    share_name = data['name']
+
+    bot_message = await message.answer(f'Введите цену покупки акции <b>"{share_name}"</b>')
     await state.update_data(message_ids=[message.message_id, bot_message.message_id])
 
     await state.set_state(AddShare.purchase_price)
