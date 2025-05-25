@@ -113,7 +113,7 @@ async def choose_banks(session, level, menu_name, bank_id):
     bank_logic = bank.to_logic()
 
     total_balance_rubls = bank_logic.get_total_balance_bank_rubls()
-    total_balance_dollars = bank_logic.get_total_balance_bank_dollars()
+    total_balance_dollars = await bank_logic.get_total_balance_bank_dollars()
     total_balance_accounts = bank_logic.get_total_balance_accounts_rubls()
     total_balance_currencies = bank_logic.get_total_balance_currencies_rubls()
     total_balance_deposits = bank_logic.get_total_balance_deposits_rubls()
@@ -150,7 +150,7 @@ async def choose_cryptomarkets(session, level, menu_name, cryptomarket_id):
     cryptomarket = await orm_get_cryptomarket_by_id(session, cryptomarket_id)
     cryptomarket_logic = cryptomarket.to_logic()
     total_balance_dollars = cryptomarket_logic.get_total_balance_cryptomarket_in_dollars()
-    total_balance_rubls = cryptomarket_logic.get_total_balance_cryptomarket_in_rubls()
+    total_balance_rubls = await cryptomarket_logic.get_total_balance_cryptomarket_in_rubls()
     caption = (
         f"<b>💸🔒 Криптобиржа {cryptomarket.name}</b>\n\n"
         f"<u>Общий баланс активов:</u>\n"
@@ -180,8 +180,8 @@ async def choose_stockmarkets(session, level, menu_name, stockmarket_id):
 
     stockmarket = await orm_get_stock_market_by_id(session, stockmarket_id)
     stockmarket_logic = stockmarket.to_logic()
-    total_balance_dollars = stockmarket_logic.get_total_balance_stockmarket_in_dollars()
-    total_balance_rubls = stockmarket_logic.get_total_balance_stockmarket_in_rubls()
+    total_balance_dollars = await stockmarket_logic.get_total_balance_stockmarket_in_dollars()
+    total_balance_rubls = await stockmarket_logic.get_total_balance_stockmarket_in_rubls()
     caption = (
         f"<b>💸🔒 Фондовая биржа {stockmarket.name}</b>\n\n"
         f"<u>Общий баланс активов:</u>\n"
@@ -602,13 +602,6 @@ async def shares(session, level, menu_name, stockmarket_id, stockmarket_name, pa
     market_price = await get_cache_price("share", share.name, session)
     current_value = float(market_price) * float(share.quantity)
     initial_value = float(share.purchase_price) * float(share.quantity)
-
-    # caption = (f"{share.name}\n\n"
-    #            f"Цена покупки: {share.purchase_price} {share.currency}\n"
-    #            f"Актуальная цена: {market_price} {share.currency}\n"
-    #            f"Кол-во: {share.quantity}\n"
-    #            f"Сумма: {current_value:.2f} {share.currency}\n")
-
     price_change = Decimal(str(market_price)) - Decimal(str(share.purchase_price))
     percentage_change = (price_change / Decimal(str(share.purchase_price))) * 100
 
