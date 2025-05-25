@@ -2,6 +2,7 @@ from abc import abstractmethod, ABC
 from decimal import Decimal
 
 from parsers.parser_currency_rate import get_exchange_rate
+from utils.cache_utils import get_exchange_rate_cached
 
 
 class MarketLogic(ABC):
@@ -16,30 +17,43 @@ class StockMarketLogic(MarketLogic):
         self.shares = shares
         self.funds = funds
 
-    def get_total_balance_shares_in_dollars(self):
-        return sum(
-            (share.market_price * share.quantity) * Decimal(get_exchange_rate(share.currency, "USD")) for share in
-            self.shares)
+    async def get_total_balance_shares_in_dollars(self):
+        total = Decimal(0)
+        for share in self.shares:
+            rate = await get_exchange_rate_cached(share.currency, "USD")
+            total += share.market_price * share.quantity * rate
+        return total
 
-    def get_total_balance_shares_in_rubls(self):
-      return sum(
-            (share.market_price * share.quantity) * Decimal(get_exchange_rate(share.currency, "RUB")) for share in
-            self.shares)
+    async def get_total_balance_shares_in_rubls(self):
+        total = Decimal(0)
+        for share in self.shares:
+            rate = await get_exchange_rate_cached(share.currency, "RUB")
+            total += share.market_price * share.quantity * rate
+        return total
 
-    def get_total_balance_funds_in_dollars(self):
-        return sum((fund.market_price * fund.quantity) * Decimal(get_exchange_rate(fund.currency, "USD")) for fund in
-                   self.funds)
+    async def get_total_balance_funds_in_dollars(self):
+        total = Decimal(0)
+        for fund in self.funds:
+            rate = await get_exchange_rate_cached(fund.currency, "USD")
+            total += fund.market_price * fund.quantity * rate
+        return total
 
-    def get_total_balance_funds_in_rubls(self):
-        return sum((fund.market_price * fund.quantity) * Decimal(get_exchange_rate(fund.currency, "RUB")) for fund in
-                   self.funds)
+    async def get_total_balance_funds_in_rubls(self):
+        total = Decimal(0)
+        for fund in self.funds:
+            rate = await get_exchange_rate_cached(fund.currency, "RUB")
+            total += fund.market_price * fund.quantity * rate
+        return total
 
-    def get_total_balance_stockmarket_in_dollars(self):
-        return Decimal(self.get_total_balance_shares_in_dollars()) + Decimal(self.get_total_balance_funds_in_dollars())
+    async def get_total_balance_stockmarket_in_dollars(self):
+        shares_total = await self.get_total_balance_shares_in_dollars()
+        funds_total = await self.get_total_balance_funds_in_dollars()
+        return shares_total + funds_total
 
-    def get_total_balance_stockmarket_in_rubls(self):
-        return Decimal(self.get_total_balance_shares_in_rubls()) + Decimal(self.get_total_balance_funds_in_rubls())
-
+    async def get_total_balance_stockmarket_in_rubls(self):
+        shares_total = await self.get_total_balance_shares_in_rubls()
+        funds_total = await self.get_total_balance_funds_in_rubls()
+        return shares_total + funds_total
 
 
 class ShareLogic:
@@ -77,15 +91,17 @@ class CryptoMarketLogic(MarketLogic):
 
     def get_total_balance_cryptocurrencies(self):
         return sum(
-            cryptocurrency.market_price * cryptocurrency.cryptocur_balance for cryptocurrency in self.cryptocurrencies)
+            cryptocurrency.market_price * cryptocurrency.cryptocur_balance
+            for cryptocurrency in self.cryptocurrencies
+        )
 
     def get_total_balance_cryptomarket_in_dollars(self):
         return self.get_total_balance_cryptocurrencies()
 
-    def get_total_balance_cryptomarket_in_rubls(self):
-        exchange_rate = Decimal(get_exchange_rate("USD", "RUB"))
-        return Decimal(self.get_total_balance_cryptomarket_in_dollars() * exchange_rate)
-
+    async def get_total_balance_cryptomarket_in_rubls(self):
+        exchange_rate = await get_exchange_rate_cached("USD", "RUB")
+        total_usd = self.get_total_balance_cryptomarket_in_dollars()
+        return Decimal(total_usd) * Decimal(exchange_rate)
 
 
 class СryptocurrencyLogic:
