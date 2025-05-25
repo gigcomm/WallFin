@@ -1,6 +1,6 @@
 from decimal import Decimal
 
-from parsers.parser_currency_rate import get_exchange_rate
+from utils.cache_utils import get_exchange_rate_cached
 
 
 class BankLogic:
@@ -14,33 +14,39 @@ class BankLogic:
     def get_total_balance_accounts_rubls(self):
         return sum(account.account_balance for account in self.accounts)
 
-    def get_total_balance_accounts_dollars(self):
+    async def get_total_balance_accounts_dollars(self):
         result = sum(account.account_balance for account in self.accounts)
-        return f"{result * Decimal(get_exchange_rate('RUB', 'USD')):.2f}"
+        rate = await get_exchange_rate_cached("RUB", "USD")
+        return f"{result * rate:.2f}"
 
     def get_total_balance_currencies_rubls(self):
         return sum(currency.currency_balance * currency.market_price for currency in self.currencies)
 
-    def get_total_balance_currencies_dollars(self):
+    async def get_total_balance_currencies_dollars(self):
         result = sum(currency.currency_balance * currency.market_price for currency in self.currencies)
-        return f"{result * Decimal(get_exchange_rate('RUB', 'USD')):.2f}"
+        rate = await get_exchange_rate_cached("RUB", "USD")
+        return f"{result * rate:.2f}"
 
     def get_total_balance_deposits_rubls(self):
         return sum(deposit.deposit_balance for deposit in self.deposits)
 
-    def get_total_balance_deposits_dollars(self):
+    async def get_total_balance_deposits_dollars(self):
         result = sum(deposit.deposit_balance for deposit in self.deposits)
-        return f"{result * Decimal(get_exchange_rate('RUB', 'USD')):.2f}"
+        rate = await get_exchange_rate_cached("RUB", "USD")
+        return f"{result * rate:.2f}"
 
     def get_total_balance_bank_rubls(self):
-        return (Decimal(self.get_total_balance_accounts_rubls()) +
+        return (
+                Decimal(self.get_total_balance_accounts_rubls()) +
                 Decimal(self.get_total_balance_deposits_rubls()) +
-                Decimal(self.get_total_balance_currencies_rubls()))
+                Decimal(self.get_total_balance_currencies_rubls())
+        )
 
-    def get_total_balance_bank_dollars(self):
-        return (Decimal(self.get_total_balance_accounts_dollars()) +
-                Decimal(self.get_total_balance_deposits_dollars()) +
-                Decimal(self.get_total_balance_currencies_dollars()))
+    async def get_total_balance_bank_dollars(self):
+        acc = await self.get_total_balance_accounts_dollars()
+        dep = await self.get_total_balance_deposits_dollars()
+        cur = await self.get_total_balance_currencies_dollars()
+        return Decimal(acc) + Decimal(dep) + Decimal(cur)
 
 
 class CurrencyLogic:
