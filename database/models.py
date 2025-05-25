@@ -1,8 +1,7 @@
 from sqlalchemy import Text, Float, Integer, String, BigInteger, Date, DECIMAL, ForeignKey
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
-from finance.bank import BankLogic, AccountLogic, CurrencyLogic, DepositLogic
-from finance.market import StockMarketLogic, CryptoMarketLogic, ShareLogic, FundLogic, СryptocurrencyLogic
+
 
 
 class Base(DeclarativeBase):
@@ -41,6 +40,7 @@ class Bank(Base):
     deposit: Mapped[list["Deposit"]] = relationship(back_populates="bank")
 
     def to_logic(self):
+        from finance.bank import BankLogic, AccountLogic, CurrencyLogic, DepositLogic
         account_logic = [AccountLogic(account.name, account.balance)
                          for account in self.account]
         currency_logic = [CurrencyLogic(curr.name, curr.balance, curr.market_price)
@@ -96,6 +96,7 @@ class StockMarket(Base):
     fund: Mapped[list["Fund"]] = relationship(back_populates="stockmarket")
 
     def to_logic(self):
+        from finance.market import StockMarketLogic, ShareLogic, FundLogic
         share_logic = [
             ShareLogic(share.name, share.purchase_price, share.selling_price, share.market_price, share.quantity, share.currency)
             for share in self.share]
@@ -144,6 +145,7 @@ class CryptoMarket(Base):
     cryptocurrency: Mapped[list["Cryptocurrency"]] = relationship(back_populates="cryptomarket")
 
     def to_logic(self):
+        from finance.market import CryptoMarketLogic, СryptocurrencyLogic
         cryptocurrency_logic = [
             СryptocurrencyLogic(cryptocur.name, cryptocur.balance, cryptocur.purchase_price, cryptocur.selling_price,
                                 cryptocur.market_price) for cryptocur in self.cryptocurrency]
