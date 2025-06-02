@@ -30,7 +30,7 @@ async def on_startup(bot):
 
 
 async def on_shutdown(bot):
-    print('Бот упал')
+    print("Бот упал")
 
 logger.info("Приложение запущено с логами")
 
