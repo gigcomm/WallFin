@@ -39,7 +39,7 @@ async def add_banner(message: types.Message, state: FSMContext, session: AsyncSe
     for_page = message.caption.strip()
     pages_names = [page.name for page in await orm_get_info_pages(session)]
     if for_page not in pages_names:
-        await message.answer(f"Введите существующее название страницы, напримаер"
+        await message.answer(f"Введите существующее название страницы, например"
                              f"{', '.join(pages_names)}")
         return
     await orm_update_banner_image(session, for_page, image_id)
