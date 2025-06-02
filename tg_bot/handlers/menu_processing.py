@@ -645,7 +645,7 @@ async def get_menu_content(
 
     for bank in orm_banks:
         if level == 3 and menu_name == bank.name:
-            return await choose_banks(session, level, menu_name, bank_id)
+            return await choose_banks(session, level, bank_id)
 
     if level == 3 and menu_name == "delete_bank":
         return await confirm_delete_bank(session, level, bank_id)
@@ -661,14 +661,14 @@ async def get_menu_content(
 
     for cryptomarket in orm_cryptomarkets:
         if level == 3 and menu_name == cryptomarket.name:
-            return await choose_cryptomarkets(session, level, menu_name, cryptomarket.id)
+            return await choose_cryptomarkets(session, level, cryptomarket.id)
 
     orm_user_id = await orm_get_user(session, user_tg_id)
     orm_stockmarkets = await orm_get_stock_market(session, orm_user_id)
 
     for stockmarket in orm_stockmarkets:
         if level == 3 and menu_name == stockmarket.name:
-            return await choose_stockmarkets(session, level, menu_name, stockmarket_id)
+            return await choose_stockmarkets(session, level, stockmarket_id)
 
     bank = await orm_get_bank_by_id(session, bank_id)
 
