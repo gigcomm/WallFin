@@ -46,10 +46,13 @@ async def change_account(callback_query: CallbackQuery, state: FSMContext, sessi
     AddAccount.account_for_change = account_for_change
 
     keyboard_message = await callback_query.message.answer(
-        "В режиме изменения, если поставить точку, данное поле будет прежним,"
-        "а процесс перейдет к следующему полю объекта.\nИзмените данные:",
+        "Вы находитесь в режиме изменения.\n"
+        "Чтобы оставить поле без изменений, введите точку (.) — тогда будет сохранено текущее значение, "
+        "и вы перейдёте к следующему полю.",
         reply_markup=ACCOUNT_CANCEL_AND_BACK_FSM)
-    bot_message = await callback_query.message.answer("Введите название счета")
+    bot_message = await callback_query.message.answer(
+        "Введите новое название счета."
+    )
 
     await state.update_data(keyboard_message_id=[keyboard_message.message_id], message_ids=[bot_message.message_id])
 
@@ -101,7 +104,8 @@ async def back_handler(message: types.Message, state: FSMContext) -> None:
 
     if current_state == AddAccount.name:
         bot_message = await message.answer(
-            "Предыдущего шага нет, введите название счета или нажмите ниже на кнопку отмены")
+             "Предыдущего шага нет. Введите название счета или нажмите кнопку «Отмена» ниже."
+        )
         await state.update_data(message_ids=[message.message_id, bot_message.message_id])
         return
 

@@ -113,7 +113,7 @@ async def add_name(message: types.Message, state: FSMContext, session: AsyncSess
         await state.update_data(name=AddStockMarket.stock_market_for_change.name)
     else:
         if len(message.text) > 50:
-            bot_message = await message.answer("Название финбиржи не должно превышать 50 символов. \n Введите заново")
+            bot_message = await message.answer("Название финбиржи не должно превышать 50 символов.\nВведите заново")
             await state.update_data(message_ids=[message.message_id, bot_message.message_id])
             return
 

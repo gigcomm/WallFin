@@ -21,10 +21,11 @@ CRYPTOCURRENCY_CANCEL_FSM = get_keyboard(
 )
 
 CRYPTOCURRENCY_CANCEL_AND_BACK_FSM = get_keyboard(
-"Отменить действие с криптовалютой",
+    "Отменить действие с криптовалютой",
     "Назад к предыдущему шагу для криптовалюты",
     placeholder="Используйте кнопки ниже для действий",
 )
+
 
 class AddСryptocurrency(StatesGroup):
     cryptocurrency_id = State()
@@ -55,10 +56,14 @@ async def change_cryptocurrency(callback_query: CallbackQuery, state: FSMContext
     AddСryptocurrency.cryptocurrency_for_change = cryptocurrency_for_change
 
     keyboard_message = await callback_query.message.answer(
-        "В режиме изменения, если поставить точку, данное поле будет прежним,"
-        "а процесс перейдет к следующему полю объекта.\nИзмените данные:",
-        reply_markup=CRYPTOCURRENCY_CANCEL_AND_BACK_FSM)
-    bot_message = await callback_query.message.answer("Введите название криптовалюты")
+        "Вы находитесь в режиме изменения.\n"
+        "Чтобы оставить поле без изменений, введите точку (.) — тогда будет сохранено текущее значение, "
+        "и вы перейдёте к следующему полю.",
+        reply_markup=CRYPTOCURRENCY_CANCEL_AND_BACK_FSM
+    )
+    bot_message = await callback_query.message.answer(
+        "Введите новое значение для криптовалюты."
+    )
     await state.update_data(keyboard_message_id=[keyboard_message.message_id], message_ids=[bot_message.message_id])
 
     await state.set_state(AddСryptocurrency.name)
@@ -107,7 +112,9 @@ async def back_handler(message: types.Message, state: FSMContext) -> None:
     current_state = await state.get_state()
 
     if current_state == AddСryptocurrency.name:
-        bot_message = await message.answer("Предыдущего шага нет, введите название криптовалюты или нажмите ниже на кнопку отмены")
+        bot_message = await message.answer(
+            "Предыдущего шага нет. Введите название криптовалюты или нажмите кнопку «Отмена» ниже."
+        )
         await state.update_data(message_ids=[message.message_id, bot_message.message_id])
         return
 
@@ -115,7 +122,8 @@ async def back_handler(message: types.Message, state: FSMContext) -> None:
     for step in AddСryptocurrency.__all_states__:
         if step.state == current_state:
             await state.set_state(previous)
-            bot_message = await message.answer(f"Вы вернулись к прошлому шагу \n {AddСryptocurrency.texts[previous.state]}")
+            bot_message = await message.answer(
+                f"Вы вернулись к прошлому шагу\n {AddСryptocurrency.texts[previous.state]}")
             await state.update_data(message_ids=[message.message_id, bot_message.message_id])
             return
         previous = step
@@ -160,7 +168,7 @@ async def add_name(message: types.Message, state: FSMContext, session: AsyncSess
     data = await state.get_data()
     cryptocurrency_name = data['name']
 
-    bot_message = await message.answer(f'Введите количество криптовалюты<b>{cryptocurrency_name}</b>')
+    bot_message = await message.answer(f'Введите количество криптовалюты <b>{cryptocurrency_name}</b>')
     await state.update_data(message_ids=[message.message_id, bot_message.message_id])
 
     await state.set_state(AddСryptocurrency.balance)
@@ -269,8 +277,8 @@ async def add_selling_price(message: types.Message, state: FSMContext):
         return
 
     bot_message = await message.answer(
-        "Введите цену криптовалюты на криптобирже или введите слово 'авто' для автоматического определения "
-        "текущей цены криптовалюты")
+        "Введите цену криптовалюты вручную или укажите 'авто' для автоматического получения актуальной цены с биржи."
+    )
     await state.update_data(message_ids=[message.message_id, bot_message.message_id])
 
     await state.set_state(AddСryptocurrency.market_price)
@@ -297,19 +305,23 @@ async def add_market_price(message: types.Message, state: FSMContext, session: A
                     return
 
                 await state.update_data(market_price=auto_market_price)
-                bot_message = await message.answer(f"Курс {cryptocur_name} на криптобирже автоматически установлен: {auto_market_price}")
+                bot_message = await message.answer(
+                    f"Курс {cryptocur_name} на криптобирже автоматически установлен: {auto_market_price}")
 
                 await asyncio.sleep(2)
                 await bot_message.delete()
 
             except (ConnectionError, TimeoutError) as e:
-                logger.error(f"Ошибка подключения при получении рыночной цены криптовалюты {cryptocur_name} для пользователя {message.from_user.id}: {e}")
-                bot_message = await message.answer("Ошибка подключения к сервису получения цены криптовалюты. Введите цену с клавиатуры!")
+                logger.error(
+                    f"Ошибка подключения при получении рыночной цены криптовалюты {cryptocur_name} для пользователя {message.from_user.id}: {e}")
+                bot_message = await message.answer(
+                    "Ошибка подключения к сервису получения цены криптовалюты. Введите цену с клавиатуры!")
                 await state.update_data(message_ids=[message.message_id, bot_message.message_id])
                 return
 
             except Exception as e:
-                logger.exception(f"Ошибка при определении рыночной цены криптовалюты {cryptocur_name} для пользователя {message.from_user.id}: {e}")
+                logger.exception(
+                    f"Ошибка при определении рыночной цены криптовалюты {cryptocur_name} для пользователя {message.from_user.id}: {e}")
                 bot_message = await message.answer("Не удалось получить цену криптовалюты, введите цену с клавиатуры!")
                 await state.update_data(message_ids=[message.message_id, bot_message.message_id])
                 return
@@ -325,7 +337,10 @@ async def add_market_price(message: types.Message, state: FSMContext, session: A
 
             except ValueError:
                 logger.warning(f"Некорректное значение рыночной цены криптовалюты: {message.text}")
-                bot_message = await message.answer("Введите корректное числовое значение для рыночной цены криптовалюты")
+                bot_message = await message.answer(
+                    "Введите корректное числовое значение цены криптовалюты, например: 123.45, " 
+                    "или введите 'авто' для автоматического определения текущей цены."
+                )
                 await state.update_data(message_ids=[message.message_id, bot_message.message_id])
                 return
 
@@ -336,7 +351,8 @@ async def add_market_price(message: types.Message, state: FSMContext, session: A
         else:
             await orm_add_cryptocurrency(session, data)
 
-        bot_message = await message.answer(f"Криптовалюта {cryptocur_name} добавлена", reply_markup=types.ReplyKeyboardRemove())
+        bot_message = await message.answer(f"Криптовалюта {cryptocur_name} добавлена",
+                                           reply_markup=types.ReplyKeyboardRemove())
         await state.update_data(message_ids=[message.message_id, bot_message.message_id])
         await state.clear()
 
