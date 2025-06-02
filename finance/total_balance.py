@@ -13,7 +13,7 @@ class TotalBalance:
         self.stock_markets = stock_markets
         self.crypto_markets = crypto_markets
 
-    def get_total_assets(self):
+    async def get_total_assets(self):
         total_balance_rubls = Decimal(0.0)
 
         for bank in self.banks:
@@ -22,11 +22,11 @@ class TotalBalance:
 
         for stockmarket in self.stock_markets:
             stockmarket_logic = stockmarket.to_logic()
-            total_balance_rubls += stockmarket_logic.get_total_balance_stockmarket_in_rubls()
+            total_balance_rubls += await stockmarket_logic.get_total_balance_stockmarket_in_rubls()
 
         for cryptomarket in self.crypto_markets:
             cryptomarket_logic = cryptomarket.to_logic()
-            total_balance_rubls += cryptomarket_logic.get_total_balance_cryptomarket_in_rubls()
+            total_balance_rubls += await cryptomarket_logic.get_total_balance_cryptomarket_in_rubls()
 
         return total_balance_rubls
 
@@ -42,7 +42,7 @@ async def calculate_total_balance(session: AsyncSession, user_tg_id: int):
     total_balance_calculator = TotalBalance(banks, stockmarkets, cryptomarkets)
 
     # Получаем общий баланс
-    total_balance_rubls = total_balance_calculator.get_total_assets()
+    total_balance_rubls = await total_balance_calculator.get_total_assets()
     total_balance_dollars = Decimal(get_exchange_rate("RUB", "USD")) * total_balance_rubls
 
     description = (f"Ваш общий баланс активов составляет: {total_balance_rubls:.2f} рублей 💰\n"
