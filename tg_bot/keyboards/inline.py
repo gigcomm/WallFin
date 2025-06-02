@@ -83,7 +83,7 @@ def get_user_banks_btns(*, level: int, banks: list, user_tg_id: int, sizes: tupl
     return keyboard.adjust(*sizes).as_markup()
 
 
-def get_user_stockmarkets_btns(*, level: int, stockmarkets: list, user_tg_id: int, sizes: tuple[int] = (2, )):
+def get_user_stockmarkets_btns(*, level: int, stockmarkets: list, user_tg_id: int, sizes: tuple[int] = (2,)):
     keyboard = InlineKeyboardBuilder()
 
     for stockmarket in stockmarkets:
@@ -106,7 +106,7 @@ def get_user_stockmarkets_btns(*, level: int, stockmarkets: list, user_tg_id: in
     return keyboard.adjust(*sizes).as_markup()
 
 
-def get_user_cryptomarkets_btns(*, level: int, cryptomarkets: list, user_tg_id: int, sizes: tuple[int] = (2, )):
+def get_user_cryptomarkets_btns(*, level: int, cryptomarkets: list, user_tg_id: int, sizes: tuple[int] = (2,)):
     keyboard = InlineKeyboardBuilder()
 
     for cryptomarket in cryptomarkets:
@@ -135,7 +135,7 @@ def get_user_assets_bank_btns(*, level: int, assets_bank: list, bank_id: int, si
     for asset_bank in assets_bank:
         keyboard.add(InlineKeyboardButton(
             text=asset_bank,
-            callback_data=MenuCallBack(level=level + 1, bank_id=bank_id).pack()))
+            callback_data=MenuCallBack(level=level + 1, menu_name=asset_bank, bank_id=bank_id).pack()))
     if assets_bank:
         keyboard.add(InlineKeyboardButton(
             text='🔄Изменить банк',
@@ -183,7 +183,7 @@ def get_user_assets_stockmarkets_btns(*, level: int, assets_stockmarkets: list, 
     for asset_stockmarket in assets_stockmarkets:
         keyboard.add(InlineKeyboardButton(
             text=asset_stockmarket,
-            callback_data=MenuCallBack(level=level + 1, stockmarket_id=stockmarket_id).pack()
+            callback_data=MenuCallBack(level=level + 1, menu_name=asset_stockmarket, stockmarket_id=stockmarket_id).pack()
         ))
     if assets_stockmarkets:
         keyboard.add(InlineKeyboardButton(
@@ -193,7 +193,8 @@ def get_user_assets_stockmarkets_btns(*, level: int, assets_stockmarkets: list, 
 
         keyboard.add(InlineKeyboardButton(
             text='❌Удалить финбиржу',
-            callback_data=MenuCallBack(level=level, menu_name='delete_stockmarket', stockmarket_id=stockmarket_id).pack()
+            callback_data=MenuCallBack(level=level, menu_name='delete_stockmarket',
+                                       stockmarket_id=stockmarket_id).pack()
         ))
 
     keyboard.add(InlineKeyboardButton(
@@ -233,7 +234,7 @@ def get_user_assets_cryptomarkets_btns(*, level: int, assets_cryptomarkets: list
     for asset_cryptomarket in assets_cryptomarkets:
         keyboard.add(InlineKeyboardButton(
             text=asset_cryptomarket,
-            callback_data=MenuCallBack(level=level + 1, cryptomarket_id=cryptomarket_id).pack()
+            callback_data=MenuCallBack(level=level + 1, menu_name=asset_cryptomarket, cryptomarket_id=cryptomarket_id).pack()
 
         ))
     if assets_cryptomarkets:
@@ -244,7 +245,8 @@ def get_user_assets_cryptomarkets_btns(*, level: int, assets_cryptomarkets: list
 
         keyboard.add(InlineKeyboardButton(
             text='❌Удалить криптобиржу',
-            callback_data=MenuCallBack(level=level, menu_name="delete_cryptomarket", cryptomarket_id=cryptomarket_id).pack()
+            callback_data=MenuCallBack(level=level, menu_name="delete_cryptomarket",
+                                       cryptomarket_id=cryptomarket_id).pack()
         ))
 
     keyboard.add(InlineKeyboardButton(
@@ -260,7 +262,8 @@ def get_user_assets_cryptomarkets_btns(*, level: int, assets_cryptomarkets: list
     return keyboard.adjust(*sizes).as_markup()
 
 
-def get_confirm_delete_cryptomarket(*, level: int, cryptomarket_name: str, cryptomarket_id: int, sizes: tuple[int] = (2,)):
+def get_confirm_delete_cryptomarket(*, level: int, cryptomarket_name: str, cryptomarket_id: int,
+                                    sizes: tuple[int] = (2,)):
     keyboard = InlineKeyboardBuilder()
 
     keyboard.add(InlineKeyboardButton(
@@ -331,7 +334,7 @@ def get_account_btns(
 
     keyboard.add(InlineKeyboardButton(
         text='🔙Назад в главное меню',
-        callback_data=MenuCallBack(level=level-4, menu_name='main').pack()
+        callback_data=MenuCallBack(level=level - 4, menu_name='main').pack()
     ))
 
     keyboard.adjust(*sizes)
