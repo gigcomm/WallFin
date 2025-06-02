@@ -55,11 +55,14 @@ async def change_currency(callback_query: CallbackQuery, state: FSMContext, sess
     AddCurrency.currency_for_change = currency_for_change
 
     keyboard_message = await callback_query.message.answer(
-        "В режиме изменения, если поставить точку, данное поле будет прежним,"
-        "а процесс перейдет к следующему полю объекта.\nИзмените данные:",
+        "Вы находитесь в режиме изменения.\n"
+        "Чтобы оставить поле без изменений, введите точку (.) — тогда будет сохранено текущее значение, "
+        "и вы перейдёте к следующему полю.",
         reply_markup=CURRENCY_CANCEL_AND_BACK_FSM)
 
-    bot_message = await callback_query.message.answer("Введите название валюты, например USD")
+    bot_message = await callback_query.message.answer(
+        "Введите новое название валюты, например USD."
+    )
     await state.update_data(keyboard_message_id=[keyboard_message.message_id], message_ids=[bot_message.message_id])
 
     await state.set_state(AddCurrency.name)
@@ -109,7 +112,9 @@ async def back_handler(message: types.Message, state: FSMContext) -> None:
     current_state = await state.get_state()
 
     if current_state == AddCurrency.name:
-        bot_message = await message.answer("Предыдущего шага нет, введите название валюты или нажмите ниже на кнопку отмены")
+        bot_message = await message.answer(
+             "Предыдущего шага нет. Введите название валюты или нажмите кнопку «Отмена» ниже."
+        )
         await state.update_data(message_ids=[message.message_id, bot_message.message_id])
         return
 

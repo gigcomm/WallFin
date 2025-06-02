@@ -18,7 +18,7 @@ FUND_CANCEL_FSM = get_keyboard(
 )
 
 FUND_CANCEL_AND_BACK_FSM = get_keyboard(
-"Отменить действие с фондом",
+    "Отменить действие с фондом",
     "Назад к предыдущему шагу для фонда",
     placeholder="Используйте кнопки ниже для действий",
 )
@@ -54,10 +54,13 @@ async def change_fund(callback_query: types.CallbackQuery, state: FSMContext, se
     AddFund.fund_for_change = fund_for_change
 
     keyboard_message = await callback_query.message.answer(
-        "В режиме изменения, если поставить точку, данное поле будет прежним,"
-        "а процесс перейдет к следующему полю объекта.\nИзмените данные:",
+        "Вы находитесь в режиме изменения.\n"
+        "Чтобы оставить поле без изменений, введите точку (.) — тогда будет сохранено текущее значение, "
+        "и вы перейдёте к следующему полю.",
         reply_markup=FUND_CANCEL_AND_BACK_FSM)
-    bot_message = await callback_query.message.answer("Введите тикер фонда, например, TITR")
+    bot_message = await callback_query.message.answer(
+        "Введите новый тикер фонда, например, TITR."
+    )
     await state.update_data(keyboard_message_id=[keyboard_message.message_id], message_ids=[bot_message.message_id])
 
     await state.set_state(AddFund.name)
@@ -106,7 +109,9 @@ async def back_handler(message: types.Message, state: FSMContext) -> None:
     current_state = await state.get_state()
 
     if current_state == AddFund.name:
-        bot_message = await message.answer("Предыдущего шага нет, введите название фонда или нажмите ниже на кнопку отмены")
+        bot_message = await message.answer(
+            "Предыдущего шага нет. Введите название фонда или нажмите кнопку «Отмена» ниже."
+        )
         await state.update_data(message_ids=[message.message_id, bot_message.message_id])
         return
 
@@ -266,7 +271,9 @@ async def add_market_price(message: types.Message, state: FSMContext):
                     return
 
                 await state.update_data(market_price=auto_market_price, currency=currency)
-                bot_message = await message.answer(f"Курс {fund_name} на финбирже автоматически установлен: {auto_market_price}")
+                bot_message = await message.answer(
+                    f"Курс {fund_name} на финбирже автоматически установлен: {auto_market_price}"
+                )
 
                 await asyncio.sleep(2)
                 await bot_message.delete()
@@ -304,7 +311,10 @@ async def add_market_price(message: types.Message, state: FSMContext):
 
             except ValueError:
                 logger.warning(f"Некорректное значение рыночной цены фонда: {message.text}")
-                bot_message = await message.answer("Введите корректное числовое значение для цены фонда с помощью клавиатуры, например, 123.45")
+                bot_message = await message.answer(
+                    "Введите корректное числовое значение цены фонда, например: 123.45, "
+                    "или введите 'авто' для автоматического определения текущей цены."
+                )
                 await state.update_data(message_ids=[message.message_id, bot_message.message_id])
                 return
 
@@ -328,7 +338,7 @@ async def add_currency(message: types.Message, state: FSMContext):
 
             valid_currencies = ['RUB', 'USD', 'EUR']
             if currency not in valid_currencies:
-                bot_message = await message.answer("Введите корректный код валюты (например, RUB, USD, EUR):")
+                bot_message = await message.answer("Введите корректный код валюты (RUB, USD, EUR):")
                 await state.update_data(message_ids=[message.message_id, bot_message.message_id])
                 return
 

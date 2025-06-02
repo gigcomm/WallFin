@@ -55,10 +55,13 @@ async def change_share(callback_query: CallbackQuery, state: FSMContext, session
 
     AddShare.share_for_change = share_for_change
 
-    keyboard_message = await callback_query.message.answer("В режиме изменения, если поставить точку, данное поле будет прежним,"
-        "а процесс перейдет к следующему полю объекта.\nИзмените данные:",
+    keyboard_message = await callback_query.message.answer("Вы находитесь в режиме изменения.\n"
+        "Чтобы оставить поле без изменений, введите точку (.) — тогда будет сохранено текущее значение, "
+        "и вы перейдёте к следующему полю.",
         reply_markup=SHARE_CANCEL_AND_BACK_FSM)
-    bot_message = await callback_query.message.answer("Введите тикер акции, например: SBER, AAPL...")
+    bot_message = await callback_query.message.answer(
+        "Введите новый тикер акции, например: SBER, AAPL."
+    )
 
     await state.update_data(keyboard_message_id=[keyboard_message.message_id], message_ids=[bot_message.message_id])
 
@@ -109,7 +112,9 @@ async def back_handler(message: types.Message, state: FSMContext) -> None:
     current_state = await state.get_state()
 
     if current_state == AddShare.name:
-        bot_message = await message.answer("Предыдущего шага нет, введите название акции или нажмите ниже на кнопку отмены")
+        bot_message = await message.answer(
+            "Предыдущего шага нет. Введите название акции или нажмите кнопку «Отмена» ниже."
+        )
         await state.update_data(message_ids=[message.message_id, bot_message.message_id])
         return
 
@@ -305,7 +310,9 @@ async def add_market_price(message: types.Message, state: FSMContext):
 
             except ValueError:
                 logger.warning(f"Некорректное значение рыночной цены акции: {message.text}")
-                bot_message = await message.answer("Введите корректное числовое значение для цены акции с клавиатуры, например, 123.45")
+                bot_message = await message.answer("Введите корректное числовое значение цены акции, например: 123.45, "
+                    "или введите 'авто' для автоматического определения текущей цены."
+                )
                 await state.update_data(message_ids=[message.message_id, bot_message.message_id])
                 return
 
@@ -329,7 +336,7 @@ async def add_currency(message: types.Message, state: FSMContext):
 
             valid_currencies = ['RUB', 'USD', 'EUR']
             if currency not in valid_currencies:
-                bot_message = await message.answer("Введите корректный код валюты (например, RUB, USD, EUR):")
+                bot_message = await message.answer("Введите корректный код валюты (RUB, USD, EUR):")
                 await state.update_data(message_ids=[message.message_id, bot_message.message_id])
                 return
 
