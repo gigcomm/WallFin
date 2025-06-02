@@ -75,8 +75,6 @@ async def banks(session, level, menu_name, user_tg_id):
     image = InputMediaPhoto(media=banner.image, caption=banner.description)
     user_id = await orm_get_user(session, user_tg_id)
     banks = await orm_get_bank(session, user_id)
-    # for bank in banks:
-    #     description_for_info[bank.name] = f"В банке {bank.name} содержаться активы:"
     kbds = get_user_banks_btns(level=level, banks=banks, user_tg_id=user_tg_id)
     return image, kbds
 
@@ -86,9 +84,6 @@ async def stockmarkets(session, level, menu_name, user_tg_id):
     image = InputMediaPhoto(media=banner.image, caption=banner.description)
     user_id = await orm_get_user(session, user_tg_id)
     stockmarkets = await orm_get_stock_market(session, user_id)
-    # for stockmarket in stockmarkets:
-    #     description_for_info[stockmarket.name] = f"На финбирже {stockmarket.name} содержаться активы:"
-
     kbds = get_user_stockmarkets_btns(level=level, stockmarkets=stockmarkets, user_tg_id=user_tg_id)
     return image, kbds
 
@@ -98,14 +93,10 @@ async def cryptomarkets(session, level, menu_name, user_tg_id):
     image = InputMediaPhoto(media=banner.image, caption=banner.description)
     user_id = await orm_get_user(session, user_tg_id)
     cryptomarkets = await orm_get_cryptomarket(session, user_id)
-    # for cryptomarket in cryptomarkets:
-    #     description_for_info[cryptomarket.name] = f"На криптобирже {cryptomarket.name} содержаться активы:"
-
     kbds = get_user_cryptomarkets_btns(level=level, cryptomarkets=cryptomarkets, user_tg_id=user_tg_id)
     return image, kbds
 
 
-# определен общая сумма активов для банка, нужен процесс тестирования
 async def choose_banks(session, level, bank_id):
     bank = await orm_get_bank_by_id(session, bank_id)
     bank_logic = bank.to_logic()
