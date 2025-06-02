@@ -106,9 +106,7 @@ async def cryptomarkets(session, level, menu_name, user_tg_id):
 
 
 # определен общая сумма активов для банка, нужен процесс тестирования
-async def choose_banks(session, level, menu_name, bank_id):
-    # banner = await orm_get_banner(session, menu_name)
-    # image = InputMediaPhoto(media=banner.image, caption=banner.description)
+async def choose_banks(session, level, bank_id):
     bank = await orm_get_bank_by_id(session, bank_id)
     bank_logic = bank.to_logic()
 
@@ -144,9 +142,7 @@ async def confirm_delete_bank(session, level, bank_id):
     return caption, kbds
 
 
-async def choose_cryptomarkets(session, level, menu_name, cryptomarket_id):
-    # banner = await orm_get_banner(session, menu_name)
-    # image = InputMediaPhoto(media=banner.image, caption=banner.description)
+async def choose_cryptomarkets(session, level, cryptomarket_id):
     cryptomarket = await orm_get_cryptomarket_by_id(session, cryptomarket_id)
     cryptomarket_logic = cryptomarket.to_logic()
     total_balance_dollars = cryptomarket_logic.get_total_balance_cryptomarket_in_dollars()
@@ -174,10 +170,7 @@ async def confirm_delete_stockmarket(session, level, stockmarket_id):
     return caption, kbds
 
 
-async def choose_stockmarkets(session, level, menu_name, stockmarket_id):
-    # banner = await orm_get_banner(session, menu_name)
-    # image = InputMediaPhoto(media=banner.image, caption=banner.description)
-
+async def choose_stockmarkets(session, level, stockmarket_id):
     stockmarket = await orm_get_stock_market_by_id(session, stockmarket_id)
     stockmarket_logic = stockmarket.to_logic()
     total_balance_dollars = await stockmarket_logic.get_total_balance_stockmarket_in_dollars()
