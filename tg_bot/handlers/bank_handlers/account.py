@@ -113,7 +113,7 @@ async def back_handler(message: types.Message, state: FSMContext) -> None:
     for step in AddAccount.__all_states__:
         if step.state == current_state:
             await state.set_state(previous)
-            bot_message = await message.answer(f"Вы вернулись к прошлому шагу \n {AddAccount.texts[previous.state]}")
+            bot_message = await message.answer(f"Вы вернулись к прошлому шагу\n{AddAccount.texts[previous.state]}")
             await state.update_data(message_ids=[message.message_id, bot_message.message_id])
             return
         previous = step
@@ -176,6 +176,13 @@ async def add_balance(message: types.Message, state: FSMContext, session: AsyncS
             if len(message.text) > 20:
                 bot_message = await message.answer(
                     "Количество символов баланса счета не должно превышать 10 символов.\nВведите заново")
+                await state.update_data(message_ids=[message.message_id, bot_message.message_id])
+                return
+
+            if not message.text.replace('.', '', 1).isdigit():
+                bot_message = await message.answer(
+                    "Баланс должен быть положительным числом без дополнительных символов.\n"
+                    "Введите заново, например: 123.45")
                 await state.update_data(message_ids=[message.message_id, bot_message.message_id])
                 return
 
