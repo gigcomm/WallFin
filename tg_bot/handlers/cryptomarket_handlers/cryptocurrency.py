@@ -5,13 +5,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from database.orm_query import (
     orm_add_cryptocurrency,
-    orm_update_cryptocurrency, check_existing_cryptocurrency, orm_get_cryptocurrency, orm_get_user)
+    orm_update_cryptocurrency,
+    check_existing_cryptocurrency,
+    orm_get_cryptocurrency,
+    orm_get_user)
 
 from tg_bot.handlers.common_imports import *
 from parsers.Bybit_API import get_price_cryptocurrency
 from tg_bot.keyboards.reply import get_keyboard
 from tg_bot.logger import logger
 from utils.message_utils import delete_regular_messages, delete_bot_and_user_messages
+from utils.processing_input_number import validate_positive_number
 
 cryptocurrency_router = Router()
 
@@ -190,6 +194,10 @@ async def add_balance(message: types.Message, state: FSMContext):
                 await state.update_data(message_ids=[message.message_id, bot_message.message_id])
                 return
 
+            value = await validate_positive_number(message, state, scale=8, field_name="баланса")
+            if value is None:
+                return
+
             await state.update_data(balance=float(message.text))
 
         except ValueError:
@@ -218,6 +226,10 @@ async def add_purchase_price(message: types.Message, state: FSMContext):
                 bot_message = await message.answer(
                     "Количество символов цены покупки криптовалюты не должно превышать 20 символов.\nВведите заново")
                 await state.update_data(message_ids=[message.message_id, bot_message.message_id])
+                return
+
+            value = await validate_positive_number(message, state, scale=8, field_name="цены покупки")
+            if value is None:
                 return
 
             value = float(message.text)
@@ -260,6 +272,10 @@ async def add_selling_price(message: types.Message, state: FSMContext):
                 bot_message = await message.answer(
                     "Количество символов цены продажи криптовалюты не должно превышать 20 символов.\nВведите заново")
                 await state.update_data(message_ids=[message.message_id, bot_message.message_id])
+                return
+
+            value = await validate_positive_number(message, state, scale=8, field_name="цены продажи")
+            if value is None:
                 return
 
             await state.update_data(selling_price=float(message.text))
@@ -331,6 +347,10 @@ async def add_market_price(message: types.Message, state: FSMContext, session: A
                     bot_message = await message.answer(
                         "Количество символов для рыночной цены криптовалюты не должно превышать 16 символов.\nВведите заново")
                     await state.update_data(message_ids=[message.message_id, bot_message.message_id])
+                    return
+
+                value = await validate_positive_number(message, state, scale=8, field_name="рыночной цены", allow_auto=True)
+                if value is None:
                     return
 
                 await state.update_data(market_price=float(market_price))

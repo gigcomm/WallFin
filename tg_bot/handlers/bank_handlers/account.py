@@ -7,6 +7,7 @@ from tg_bot.logger import logger
 from tg_bot.handlers.common_imports import *
 from tg_bot.keyboards.reply import get_keyboard
 from utils.message_utils import delete_regular_messages, delete_bot_and_user_messages
+from utils.processing_input_number import validate_positive_number
 
 account_router = Router()
 
@@ -179,11 +180,8 @@ async def add_balance(message: types.Message, state: FSMContext, session: AsyncS
                 await state.update_data(message_ids=[message.message_id, bot_message.message_id])
                 return
 
-            if not message.text.replace('.', '', 1).isdigit():
-                bot_message = await message.answer(
-                    "Баланс должен быть положительным числом без дополнительных символов.\n"
-                    "Введите заново, например: 123.45")
-                await state.update_data(message_ids=[message.message_id, bot_message.message_id])
+            value = await validate_positive_number(message, state, scale=6, field_name="баланса")
+            if value is None:
                 return
 
             await state.update_data(balance=float(message.text))
