@@ -14,6 +14,7 @@ from parsers.parser_currency_rate import get_exchange_rate
 from tg_bot.keyboards.reply import get_keyboard
 from tg_bot.logger import logger
 from utils.message_utils import delete_regular_messages, delete_bot_and_user_messages
+from utils.processing_input_number import validate_positive_number
 
 currency_router = Router()
 
@@ -190,6 +191,10 @@ async def add_balance(message: types.Message, state: FSMContext):
                 await state.update_data(message_ids=[message.message_id, bot_message.message_id])
                 return
 
+            value = await validate_positive_number(message, state, scale=6, field_name="баланса")
+            if value is None:
+                return
+
             await state.update_data(balance=float(message.text))
 
     except ValueError:
@@ -243,6 +248,10 @@ async def add_market_price(message: types.Message, state: FSMContext, session: A
                     bot_message = await message.answer(
                         "Количество символов для рыночной цены валюты не должно превышать 10 символов.\nВведите заново")
                     await state.update_data(message_ids=[message.message_id, bot_message.message_id])
+                    return
+
+                value = await validate_positive_number(message, state, scale=6, field_name="курса валюты", allow_auto=True)
+                if value is None:
                     return
 
                 await state.update_data(market_price=float(market_price))

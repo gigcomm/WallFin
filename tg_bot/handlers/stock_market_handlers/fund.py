@@ -9,6 +9,7 @@ from tg_bot.keyboards.reply import get_keyboard
 from parsers.tinkoff_invest_API import get_price_fund
 from tg_bot.logger import logger
 from utils.message_utils import delete_regular_messages, delete_bot_and_user_messages
+from utils.processing_input_number import validate_positive_number
 
 fund_router = Router()
 
@@ -186,6 +187,10 @@ async def add_purchase_price(message: types.Message, state: FSMContext):
                 await state.update_data(message_ids=[message.message_id, bot_message.message_id])
                 return
 
+            value = await validate_positive_number(message, state, scale=6, field_name="цены покупки")
+            if value is None:
+                return
+
             value = float(message.text)
             if value == 0:
                 bot_message = await message.answer(
@@ -227,6 +232,10 @@ async def add_selling_price(message: types.Message, state: FSMContext):
                 bot_message = await message.answer(
                     "Количество символов для цены продажи фонда не должно превышать 20 символов.\nВведите заново")
                 await state.update_data(message_ids=[message.message_id, bot_message.message_id])
+                return
+
+            value = await validate_positive_number(message, state, scale=6, field_name="цены продажи")
+            if value is None:
                 return
 
             await state.update_data(selling_price=float(message.text))
@@ -300,6 +309,10 @@ async def add_market_price(message: types.Message, state: FSMContext):
                     await state.update_data(message_ids=[message.message_id, bot_message.message_id])
                     return
 
+                value = await validate_positive_number(message, state, scale=6, field_name="рыночной цены", allow_auto=True)
+                if value is None:
+                    return
+
                 await state.update_data(market_price=float(market_price))
 
                 currency = data.get('currency')
@@ -371,6 +384,10 @@ async def add_quantity(message: types.Message, state: FSMContext, session: Async
             bot_message = await message.answer(
                 "Количество символов для количества бумаг фонда не должно превышать 10 символов.\nВведите заново")
             await state.update_data(message_ids=[message.message_id, bot_message.message_id])
+            return
+
+        value = await validate_positive_number(message, state, scale=6, field_name="количества бумаг")
+        if value is None:
             return
 
         await state.update_data(quantity=int(message.text))

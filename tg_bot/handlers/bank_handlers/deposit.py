@@ -9,6 +9,7 @@ from tg_bot.handlers.common_imports import *
 from tg_bot.keyboards.reply import get_keyboard
 from tg_bot.logger import logger
 from utils.message_utils import delete_regular_messages, delete_bot_and_user_messages
+from utils.processing_input_number import validate_positive_number
 
 deposit_router = Router()
 
@@ -193,7 +194,8 @@ async def add_start_date(message: types.Message, state: FSMContext):
             user_date = datetime.strptime(message.text, '%d.%m.%Y').date()
             current_date = datetime.today().date()
             if user_date > current_date:
-                bot_message = await message.answer("Введенная дата не может быть в будущем.\nВведите прошедшую или сегодняшнюю дату.")
+                bot_message = await message.answer(
+                    "Введенная дата не может быть в будущем.\nВведите прошедшую или сегодняшнюю дату.")
                 await state.update_data(message_ids=[message.message_id, bot_message.message_id])
                 return
 
@@ -205,7 +207,8 @@ async def add_start_date(message: types.Message, state: FSMContext):
 
         await state.update_data(start_date=user_date)
 
-    bot_message = await message.answer("Введите срок вклада числом (например ввод числа '6', означает вклад сроком на 6 месяцев)")
+    bot_message = await message.answer(
+        "Введите срок вклада числом (например ввод числа '6', означает вклад сроком на 6 месяцев)")
     await state.update_data(message_ids=[message.message_id, bot_message.message_id])
 
     await state.set_state(AddDeposit.deposit_term)
@@ -273,6 +276,10 @@ async def add_interest_rate(message: types.Message, state: FSMContext):
                 await state.update_data(message_ids=[message.message_id, bot_message.message_id])
                 return
 
+            value = await validate_positive_number(message, state, scale=6, field_name="процентной ставки")
+            if value is None:
+                return
+
             await state.update_data(interest_rate=float(message.text))
 
     except ValueError:
@@ -283,7 +290,8 @@ async def add_interest_rate(message: types.Message, state: FSMContext):
 
     except Exception as e:
         logger.error(f"Ошибка при обновлении процентной ставки вклада для пользователя {message.from_user.id}: {e}")
-        bot_message = await message.answer("Произошла ошибка при установке процентной ставки вклада. Попробуйте еще раз.")
+        bot_message = await message.answer(
+            "Произошла ошибка при установке процентной ставки вклада. Попробуйте еще раз.")
         await state.update_data(message_ids=[message.message_id, bot_message.message_id])
         return
 
@@ -312,6 +320,10 @@ async def add_balance(message: types.Message, state: FSMContext, session: AsyncS
                 bot_message = await message.answer(
                     "Количество символов для баланса вклада не должно превышать 20 символов.\nВведите заново")
                 await state.update_data(message_ids=[message.message_id, bot_message.message_id])
+                return
+
+            value = await validate_positive_number(message, state, scale=6, field_name="баланса")
+            if value is None:
                 return
 
             await state.update_data(balance=float(message.text))
