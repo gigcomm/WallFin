@@ -15,7 +15,7 @@ user_private_router = Router()
 @user_private_router.message(CommandStart())
 async def start_cmd(message: types.Message, session: AsyncSession):
     await orm_add_user(session, message)
-    media, reply_markup = await get_menu_content(session, level=0, menu_name="main")
+    media, reply_markup = await get_menu_content(session, level=0, menu_name="main", user_tg_id=message.from_user.id)
     await message.answer_photo(media.media, caption=media.caption, reply_markup=reply_markup)
 
 
