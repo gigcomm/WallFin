@@ -5,11 +5,12 @@ from dotenv import load_dotenv
 
 load_dotenv("tg_bot/.env")
 
+redis_url = f"redis://:{os.getenv('REDIS_PASSWORD')}@{os.getenv('REDIS_HOST')}:{os.getenv('REDIS_PORT')}/0"
 
 celery_app = Celery(
     "tasks",
-    broker=os.getenv("REDIS_URL"),
-    backend=os.getenv("REDIS_URL")
+    broker=redis_url,
+    backend=redis_url
 )
 celery_app.conf.timezone = "UTC"
 

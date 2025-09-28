@@ -12,7 +12,13 @@ from parsers.parser_currency_rate import get_exchange_rate
 from parsers.tinkoff_invest_API import get_price_share, get_price_fund
 from tg_bot.logger import logger
 
-redis_client = Redis(host=os.getenv("REDIS_HOST"), port=os.getenv("REDIS_PORT"), db=0, decode_responses=True)
+redis_client = Redis(
+    host=os.getenv("REDIS_HOST"),
+    port=os.getenv("REDIS_PORT"),
+    db=0,
+    password=os.getenv("REDIS_PASSWORD"),
+    decode_responses=True
+)
 
 
 async def update_cryptocurrencies():
