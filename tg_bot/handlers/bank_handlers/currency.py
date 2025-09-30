@@ -7,7 +7,8 @@ from database.orm_query import (
     orm_add_currency,
     orm_get_currency,
     orm_update_currency,
-    check_existing_currency, orm_get_user)
+    check_existing_currency,
+    orm_get_user)
 
 from tg_bot.handlers.common_imports import *
 from parsers.parser_currency_rate import get_exchange_rate
@@ -59,7 +60,8 @@ async def change_currency(callback_query: CallbackQuery, state: FSMContext, sess
         "Вы находитесь в режиме изменения.\n"
         "Чтобы оставить поле без изменений, введите точку (.) — тогда будет сохранено текущее значение, "
         "и вы перейдёте к следующему полю.",
-        reply_markup=CURRENCY_CANCEL_AND_BACK_FSM)
+        reply_markup=CURRENCY_CANCEL_AND_BACK_FSM
+    )
 
     bot_message = await callback_query.message.answer(
         "Введите новое название валюты, например USD."
@@ -138,31 +140,30 @@ async def add_name(message: types.Message, state: FSMContext, session: AsyncSess
 
     data = await state.get_data()
     bank_id = data['bank_id']
+    name = message.text.strip().upper()
     await delete_regular_messages(data, message)
 
-    if message.text == '.' and AddCurrency.currency_for_change:
+    if name == '.' and AddCurrency.currency_for_change:
         await state.update_data(name=AddCurrency.currency_for_change.name)
     else:
-        if len(message.text) > 3:
+        if len(name) > 3:
             bot_message = await message.answer("Название валюты не должно превышать 3 символа.\nВведите заново")
             await state.update_data(message_ids=[message.message_id, bot_message.message_id])
             return
 
         try:
-            name = message.text
-
             if AddCurrency.currency_for_change and AddCurrency.currency_for_change.name == name:
                 await state.update_data(name=name)
             else:
                 check_name = await check_existing_currency(session, name, user_id, bank_id)
                 if check_name:
-                    raise ValueError(f"Валюта с именем '{name}' уже существует")
+                    raise ValueError(f"Валюта с именем '{name}' уже существует!")
 
                 await state.update_data(name=name)
 
         except ValueError as e:
             logger.error(f"Ошибка при вводе названия валюты: {e}")
-            bot_message = await message.answer("Ошибка. Пожалуйста, введите другое название:")
+            bot_message = await message.answer(f"{e} Пожалуйста, введите другое название валюты:")
             await state.update_data(message_ids=[message.message_id, bot_message.message_id])
             return
 
