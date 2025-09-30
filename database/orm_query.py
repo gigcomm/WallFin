@@ -1,4 +1,4 @@
-from sqlalchemy import select, update, delete
+from sqlalchemy import select, update, delete, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -67,9 +67,13 @@ async def orm_add_bank(session: AsyncSession, data: dict, message):
     await session.commit()
 
 
-async def check_existing_bank(session: AsyncSession, name: str, user_id: int):
-    result = await session.execute(select(Bank.name).where(Bank.name == name, Bank.user_id == user_id))
-    return result.scalar_one_or_none()
+async def check_existing_bank(session: AsyncSession, name: str, user_id: int) -> bool:
+    result = await session.execute(
+        select(Bank.id).where(
+            Bank.name == name,
+            Bank.user_id == user_id)
+    )
+    return result.scalar_one_or_none() is not None
 
 
 async def orm_get_bank_by_id(session: AsyncSession, bank_id: int):
@@ -115,10 +119,13 @@ async def orm_add_stock_market(session: AsyncSession, data: dict, message):
     await session.commit()
 
 
-async def check_existing_stock_market(session: AsyncSession, name: str, user_id: int):
+async def check_existing_stock_market(session: AsyncSession, name: str, user_id: int) -> bool:
     result = await session.execute(
-        select(StockMarket.name).where(StockMarket.name == name, StockMarket.user_id == user_id))
-    return result.scalar_one_or_none()
+        select(StockMarket.id).where(
+            StockMarket.name == name,
+            StockMarket.user_id == user_id)
+    )
+    return result.scalar_one_or_none() is not None
 
 
 async def orm_get_stock_market_by_id(session: AsyncSession, stockmarket_id: int):
@@ -162,10 +169,13 @@ async def orm_add_cryptomarket(session: AsyncSession, data: dict, message):
     await session.commit()
 
 
-async def check_existing_cryptomarket(session: AsyncSession, name: str, user_id: int):
+async def check_existing_cryptomarket(session: AsyncSession, name: str, user_id: int) -> bool:
     result = await session.execute(
-        select(CryptoMarket.name).where(CryptoMarket.name == name, CryptoMarket.user_id == user_id))
-    return result.scalar_one_or_none()
+        select(CryptoMarket.id).where(
+            CryptoMarket.name == name,
+            CryptoMarket.user_id == user_id)
+    )
+    return result.scalar_one_or_none() is not None
 
 
 async def orm_get_cryptomarket_by_id(session: AsyncSession, cryptomarket_id: int):
@@ -207,12 +217,14 @@ async def orm_add_account(session: AsyncSession, data: dict):
     await session.commit()
 
 
-async def check_existing_account(session: AsyncSession, name: str, user_id: int, bank_id: int):
+async def check_existing_account(session: AsyncSession, name: str, user_id: int, bank_id: int) -> bool:
     result = await session.execute(
-        select(Account.name).join(Bank, Bank.id == Account.bank_id).where(Account.name == name,
-                                                                          Account.bank_id == bank_id,
-                                                                          Bank.user_id == user_id))
-    return result.scalar_one_or_none()
+        select(Account.id).join(Bank, Bank.id == Account.bank_id).where(
+            Account.name == name,
+            Account.bank_id == bank_id,
+            Bank.user_id == user_id)
+    )
+    return result.scalar_one_or_none() is not None
 
 
 async def orm_get_account(session: AsyncSession, account_id: int):
@@ -251,12 +263,14 @@ async def orm_add_currency(session: AsyncSession, data: dict):
     await session.commit()
 
 
-async def check_existing_currency(session: AsyncSession, name: str, user_id: int, bank_id: int):
+async def check_existing_currency(session: AsyncSession, name: str, user_id: int, bank_id: int) -> bool:
     result = await session.execute(
-        select(Currency.name).join(Bank, Bank.id == Currency.bank_id).where(Currency.name == name,
-                                                                            Currency.bank_id == bank_id,
-                                                                            Bank.user_id == user_id))
-    return result.scalar_one_or_none()
+        select(Currency.id).join(Bank, Bank.id == Currency.bank_id).where(
+            func.upper(Currency.name) == name.upper(),
+            Currency.bank_id == bank_id,
+            Bank.user_id == user_id)
+    )
+    return result.scalar_one_or_none() is not None
 
 
 async def orm_get_currency(session: AsyncSession, currency_id: int):
@@ -308,12 +322,14 @@ async def orm_add_deposit(session: AsyncSession, data: dict):
     await session.commit()
 
 
-async def check_existing_deposit(session: AsyncSession, name: str, user_id: int, bank_id: int):
+async def check_existing_deposit(session: AsyncSession, name: str, user_id: int, bank_id: int) -> bool:
     result = await session.execute(
-        select(Deposit.name).join(Bank, Bank.id == Deposit.bank_id).where(Deposit.name == name,
-                                                                          Deposit.bank_id == bank_id,
-                                                                          Bank.user_id == user_id))
-    return result.scalar_one_or_none()
+        select(Deposit.id).join(Bank, Bank.id == Deposit.bank_id).where(
+            Deposit.name == name,
+            Deposit.bank_id == bank_id,
+            Bank.user_id == user_id)
+    )
+    return result.scalar_one_or_none() is not None
 
 
 async def orm_get_deposit(session: AsyncSession, deposit_id: int):
@@ -344,7 +360,6 @@ async def orm_delete_deposit(session: AsyncSession, deposit_id: int):
     await session.commit()
 
 
-# сделать проверку на созданную биржу
 async def orm_add_share(session: AsyncSession, data: dict):
     obj = Share(
         name=data["name"],
@@ -359,12 +374,14 @@ async def orm_add_share(session: AsyncSession, data: dict):
     await session.commit()
 
 
-async def check_existing_share(session: AsyncSession, name: str, user_id: int, stockmarket_id: int):
+async def check_existing_share(session: AsyncSession, name: str, user_id: int, stockmarket_id: int) -> bool:
     result = await session.execute(
-        select(Share.name).join(StockMarket, StockMarket.id == Share.stockmarket_id).where(Share.name == name,
-                                                                                           Share.stockmarket_id == stockmarket_id,
-                                                                                           StockMarket.user_id == user_id))
-    return result.scalar_one_or_none()
+        select(Share.id).join(StockMarket, StockMarket.id == Share.stockmarket_id).where(
+            func.upper(Share.name) == name.upper(),
+            Share.stockmarket_id == stockmarket_id,
+            StockMarket.user_id == user_id)
+    )
+    return result.scalar_one_or_none() is not None
 
 
 async def orm_get_share(session: AsyncSession, share_id: int):
@@ -420,12 +437,14 @@ async def orm_add_fund(session: AsyncSession, data: dict):
     await session.commit()
 
 
-async def check_existing_fund(session: AsyncSession, name: str, user_id: int, stockmarket_id: int):
+async def check_existing_fund(session: AsyncSession, name: str, user_id: int, stockmarket_id: int) -> bool:
     result = await session.execute(
-        select(Fund.name).join(StockMarket, StockMarket.id == Fund.stockmarket_id).where(Fund.name == name,
-                                                                                         Fund.stockmarket_id == stockmarket_id,
-                                                                                         StockMarket.user_id == user_id))
-    return result.scalar_one_or_none()
+        select(Fund.name).join(StockMarket, StockMarket.id == Fund.stockmarket_id).where(
+            func.upper(Fund.name) == name.upper(),
+            Fund.stockmarket_id == stockmarket_id,
+            StockMarket.user_id == user_id)
+    )
+    return result.scalar_one_or_none() is not None
 
 
 async def orm_get_fund(session: AsyncSession, fund_id: int):
@@ -480,12 +499,14 @@ async def orm_add_cryptocurrency(session: AsyncSession, data: dict):
     await session.commit()
 
 
-async def check_existing_cryptocurrency(session: AsyncSession, name: str, user_id: int, cryptomarket_id: int):
+async def check_existing_cryptocurrency(session: AsyncSession, name: str, user_id: int, cryptomarket_id: int) -> bool:
     result = await session.execute(
-        select(Cryptocurrency.name).join(CryptoMarket, CryptoMarket.id == Cryptocurrency.cryptomarket_id).where(
-            Cryptocurrency.name == name, Cryptocurrency.cryptomarket_id == cryptomarket_id,
-            CryptoMarket.user_id == user_id))
-    return result.scalar_one_or_none()
+        select(Cryptocurrency.id).join(CryptoMarket, CryptoMarket.id == Cryptocurrency.cryptomarket_id).where(
+            Cryptocurrency.name == name,
+            Cryptocurrency.cryptomarket_id == cryptomarket_id,
+            CryptoMarket.user_id == user_id)
+    )
+    return result.scalar_one_or_none() is not None
 
 
 async def orm_get_cryptocurrency(session: AsyncSession, cryptocurrency_id: int):
