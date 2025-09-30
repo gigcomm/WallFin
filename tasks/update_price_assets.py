@@ -14,7 +14,7 @@ from tg_bot.logger import logger
 
 redis_client = Redis(
     host=os.getenv("REDIS_HOST"),
-    port=os.getenv("REDIS_PORT"),
+    port=int(os.getenv("REDIS_PORT", 6379)),
     db=0,
     password=os.getenv("REDIS_PASSWORD"),
     decode_responses=True
