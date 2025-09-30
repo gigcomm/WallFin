@@ -131,34 +131,33 @@ async def add_name(message: types.Message, state: FSMContext, session: AsyncSess
     logger.info(f"Пользователь {message.from_user.id} вводит название фонда.")
     data = await state.get_data()
     stockmarket_id = data['stockmarket_id']
+    name = message.text.strip().upper()
     await delete_regular_messages(data, message)
 
     user_tg_id = message.from_user.id
     user_id = await orm_get_user(session, user_tg_id)
 
-    if message.text == '.' and AddFund.fund_for_change:
+    if name == '.' and AddFund.fund_for_change:
         await state.update_data(name=AddFund.fund_for_change.name)
     else:
-        if len(message.text) > 50:
+        if len(name) > 50:
             bot_message = await message.answer("Название фонда не должно превышать 50 символов.\nВведите заново")
             await state.update_data(message_ids=[message.message_id, bot_message.message_id])
             return
 
         try:
-            name = message.text
-
             if AddFund.fund_for_change and AddFund.fund_for_change.name == name:
-                await state.update_data(name=name.upper())
+                await state.update_data(name=name)
             else:
                 check_name = await check_existing_fund(session, name, user_id, stockmarket_id)
                 if check_name:
-                    raise ValueError(f"Фонд с именем '{name}' уже существует")
+                    raise ValueError(f"Фонд с именем '{name}' уже существует!")
 
-                await state.update_data(name=name.upper())
+                await state.update_data(name=name)
 
         except ValueError as e:
             logger.error(f"Ошибка при вводе названия фонда: {e}")
-            bot_message = await message.answer("Ошибка. Пожалуйста, введите другое название:")
+            bot_message = await message.answer(f"{e} Пожалуйста, введите другое название:")
             await state.update_data(message_ids=[message.message_id, bot_message.message_id])
             return
 
@@ -275,7 +274,7 @@ async def add_market_price(message: types.Message, state: FSMContext):
             try:
                 auto_market_price, currency = await get_price_fund(fund_name)
                 if auto_market_price is None:
-                    bot_message = await message.answer("Введите корректное числовое значение для цены фонда")
+                    bot_message = await message.answer(f"Данный фонд {fund_name} не найден! Введите корректное числовое значение для цены фонда:")
                     await state.update_data(message_ids=[message.message_id, bot_message.message_id])
                     return
 

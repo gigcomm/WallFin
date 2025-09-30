@@ -156,13 +156,13 @@ async def add_name(message: types.Message, state: FSMContext, session: AsyncSess
             else:
                 check_name = await check_existing_deposit(session, name, user_id, bank_id)
                 if check_name:
-                    raise ValueError(f"Вклад с именем '{name}' уже существует")
+                    raise ValueError(f"Вклад с именем '{name}' уже существует!")
 
                 await state.update_data(name=name)
 
         except ValueError as e:
             logger.error(f"Ошибка при вводе названия вклада: {e}")
-            bot_message = await message.answer("Ошибка. Пожалуйста, введите другое название:")
+            bot_message = await message.answer(f"{e} Пожалуйста, введите другое название:")
             await state.update_data(message_ids=[message.message_id, bot_message.message_id])
             return
 

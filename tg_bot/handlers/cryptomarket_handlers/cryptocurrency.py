@@ -141,31 +141,30 @@ async def add_name(message: types.Message, state: FSMContext, session: AsyncSess
 
     data = await state.get_data()
     cryptomarket_id = data['cryptomarket_id']
+    name = message.text.strip().upper()
     await delete_regular_messages(data, message)
 
-    if message.text == '.' and AddСryptocurrency.cryptocurrency_for_change:
+    if name == '.' and AddСryptocurrency.cryptocurrency_for_change:
         await state.update_data(name=AddСryptocurrency.cryptocurrency_for_change.name)
     else:
-        if len(message.text) > 10:
+        if len(name) > 10:
             bot_message = await message.answer("Название криптовалюты не должно превышать 10 символов.\nВведите заново")
             await state.update_data(message_ids=[message.message_id, bot_message.message_id])
             return
 
         try:
-            name = message.text
-
             if AddСryptocurrency.cryptocurrency_for_change and AddСryptocurrency.cryptocurrency_for_change.name == name:
-                await state.update_data(name=name.upper())
+                await state.update_data(name=name)
             else:
                 check_name = await check_existing_cryptocurrency(session, name, user_id, cryptomarket_id)
                 if check_name:
-                    raise ValueError(f"Криптовалюта с именем '{name}' уже существует")
+                    raise ValueError(f"Криптовалюта с именем '{name}' уже существует!")
 
-                await state.update_data(name=name.upper())
+                await state.update_data(name=name)
 
         except ValueError as e:
             logger.error(f"Ошибка при вводе названия криптовалюты: {e}")
-            bot_message = await message.answer("Ошибка. Пожалуйста, введите другое название:")
+            bot_message = await message.answer(f"{e}Пожалуйста, введите другое название:")
             await state.update_data(message_ids=[message.message_id, bot_message.message_id])
             return
 
@@ -316,7 +315,7 @@ async def add_market_price(message: types.Message, state: FSMContext, session: A
             try:
                 auto_market_price = get_price_cryptocurrency(cryptocur_name)
                 if auto_market_price is None:
-                    bot_message = await message.answer("Введите корректное числовое значение для цены криптовалюты")
+                    bot_message = await message.answer(f"Данная криптовалюта {cryptocur_name} не найдена! Введите корректное числовое значение для цены криптовалюты:")
                     await state.update_data(message_ids=[message.message_id, bot_message.message_id])
                     return
 

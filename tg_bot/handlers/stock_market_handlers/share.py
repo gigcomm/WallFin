@@ -138,31 +138,30 @@ async def add_name(message: types.Message, state: FSMContext, session: AsyncSess
 
     data = await state.get_data()
     stockmarket_id = data['stockmarket_id']
+    name = message.text.strip().upper()
     await delete_regular_messages(data, message)
 
-    if message.text == '.' and AddShare.share_for_change:
+    if name == '.' and AddShare.share_for_change:
         await state.update_data(name=AddShare.share_for_change.name)
     else:
-        if len(message.text) > 50:
+        if len(name) > 50:
             bot_message = await message.answer("Название акции не должно превышать 50 символов.\nВведите заново")
             await state.update_data(message_ids=[message.message_id, bot_message.message_id])
             return
 
         try:
-            name = message.text
-
             if AddShare.share_for_change and AddShare.share_for_change.name == name:
-                await state.update_data(name=name.upper())
+                await state.update_data(name=name)
             else:
                 check_name = await check_existing_share(session, name, user_id, stockmarket_id)
                 if check_name:
-                    raise ValueError(f"Акция с именем '{name}' уже существует")
+                    raise ValueError(f"Акция с именем '{name}' уже существует!")
 
-                await state.update_data(name=name.upper())
+                await state.update_data(name=name)
 
         except ValueError as e:
             logger.error(f"Ошибка при вводе названия акции: {e}")
-            bot_message = await message.answer("Ошибка. Пожалуйста, введите другое название:")
+            bot_message = await message.answer(f"{e} Пожалуйста, введите другое название:")
             await state.update_data(message_ids=[message.message_id, bot_message.message_id])
             return
 
@@ -279,7 +278,7 @@ async def add_market_price(message: types.Message, state: FSMContext):
             try:
                 auto_market_price, currency = await get_price_share(share_name)
                 if auto_market_price is None:
-                    bot_message = await message.answer("Введите корректное числовое значение для цены акции")
+                    bot_message = await message.answer(f"Данная акция {share_name} не найдена! Введите корректное числовое значение для цены акции:")
                     await state.update_data(message_ids=[message.message_id, bot_message.message_id])
                     return
 

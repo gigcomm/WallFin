@@ -234,13 +234,13 @@ async def add_market_price(message: types.Message, state: FSMContext, session: A
                 logger.info(f"Пользователь {message.from_user.id} установил курс {currency_name} к RUB автоматически: {auto_market_price}")
             except (ConnectionError, TimeoutError) as e:
                 logger.error(f"Ошибка подключения при получении курса валюты {currency_name} для пользователя {message.from_user.id}: {e}")
-                bot_message = await message.answer("Ошибка подключения к сервису курса валюты. Введите курс с клавиатуры!")
+                bot_message = await message.answer("Ошибка подключения к серверу курса валюты. Введите курс с клавиатуры!")
                 await state.update_data(message_ids=[message.message_id, bot_message.message_id])
                 return
 
             except Exception as e:
                 logger.exception(f"Ошибка при определении курса валюты {currency_name} для пользователя {message.from_user.id}: {e}")
-                bot_message = await message.answer("Не удалось получить курс валюты. Введите курс с клавиатуры!")
+                bot_message = await message.answer(f"Не удалось получить курс валюты {currency_name}. Введите курс с клавиатуры!")
                 await state.update_data(message_ids=[message.message_id, bot_message.message_id])
                 return
         else:

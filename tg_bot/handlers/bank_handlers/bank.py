@@ -29,23 +29,6 @@ BANK_CANCEL_FSM = get_keyboard(
 )
 
 
-# @bank_router.message(F.text == "Банки")
-# async def starting_at_bank(message: types.Message, session: AsyncSession):
-#     try:
-#         banks = await orm_get_bank(session, message.from_user.id)
-#         logger.info(f"Пользователь {message.from_user.id} запросил список банков. Найдено: {len(banks)} банков.")
-#
-#         buttons_bank = {bank.name: "bank_" + str(bank.id) for bank in banks}
-#         await message.answer(
-#             text="Выберите банк:",
-#             reply_markup=get_callback_btns(btns=buttons_bank)
-#         )
-#
-#     except Exception as e:
-#         logger.error(f"Ошибка при получении списка банков для пользователя {message.from_user.id}: {e}")
-#         await message.answer("Ошибка при загрузке банков. Пожалуйста, попробуйте позже.")
-
-
 @bank_router.callback_query(lambda callback_query: callback_query.data.startswith("bank_"))
 async def process_bank_selection(callback_query: CallbackQuery):
     bank_id = int(callback_query.data.split('_')[-1])
@@ -61,7 +44,6 @@ async def process_bank_selection(callback_query: CallbackQuery):
         reply_markup=get_callback_btns(btns=buttons)
     )
     await callback_query.answer()
-
 
 
 class AddBank(StatesGroup):
@@ -148,13 +130,13 @@ async def add_name(message: types.Message, state: FSMContext, session: AsyncSess
             else:
                 check_name = await check_existing_bank(session, name, user_id)
                 if check_name:
-                    raise ValueError(f"Банк с именем '{name}' уже существует")
+                    raise ValueError(f"Банк с именем '{name}' уже существует!")
 
                 await state.update_data(name=name)
 
         except ValueError as e:
             logger.error(f"Ошибка при вводе названия банка: {e}")
-            bot_message = await message.answer("Ошибка. Пожалуйста, введите другое название:")
+            bot_message = await message.answer(f"{e} Пожалуйста, введите другое название:")
             await state.update_data(message_ids=[message.message_id, bot_message.message_id])
             return
 

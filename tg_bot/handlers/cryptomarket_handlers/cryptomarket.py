@@ -123,13 +123,13 @@ async def add_name(message: types.Message, state: FSMContext, session: AsyncSess
             else:
                 check_name = await check_existing_cryptomarket(session, name, user_id)
                 if check_name:
-                    raise ValueError(f"Криптобиржа с именем '{name}' уже существует")
+                    raise ValueError(f"Криптобиржа с именем '{name}' уже существует!")
 
                 await state.update_data(name=name)
 
         except ValueError as e:
             logger.error(f"Ошибка при вводе названия криптобиржи: {e}")
-            bot_message = await message.answer("Ошибка. Пожалуйста, введите другое название:")
+            bot_message = await message.answer(f"{e} Пожалуйста, введите другое название:")
             await state.update_data(message_ids=[message.message_id, bot_message.message_id])
             return
 
