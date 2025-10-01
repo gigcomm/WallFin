@@ -13,8 +13,6 @@ services:
       - celery_worker
     env_file:
       - ./.env
-    volumes:
-      - .:/app
 
   db:
     image: postgres:14.6-alpine
@@ -26,8 +24,6 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-    ports:
-      - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
@@ -36,8 +32,6 @@ services:
     container_name: redis_cache
     restart: always
     command: ["redis-server", "--requirepass", "${REDIS_PASSWORD}"]
-    ports:
-      - "${REDIS_PORT}:6379"
     env_file:
         - ./.env
     volumes:
@@ -54,8 +48,6 @@ services:
     env_file:
       - ./.env
     command: celery -A celery_app worker --loglevel=info
-    volumes:
-      - .:/app
 
   celery_beat:
     build:
@@ -69,8 +61,6 @@ services:
     env_file:
       - ./.env
     command: celery -A celery_app beat --loglevel=info
-    volumes:
-      - .:/app
 
 volumes:
   postgres_data:
