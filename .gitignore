@@ -4,3 +4,5 @@ __pycache__/
 *.iml
 *.xml
 *.meta
+postgres_data/
+redis_data/
