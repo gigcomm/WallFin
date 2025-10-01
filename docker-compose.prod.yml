@@ -1,0 +1,22 @@
+version: '3.10'
+
+services:
+
+  bot:
+    environment:
+      DEBUG: '0'
+    restart: always
+
+  db:
+    ports: []
+    restart: always
+
+  redis:
+    ports: []
+    restart: always
+
+  celery_worker:
+    restart: always
+
+  celery_beat:
+    restart: always

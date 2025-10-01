@@ -1,0 +1,27 @@
+version: '3.10'
+
+services:
+
+  bot:
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    environment:
+      DEBUG: '1'
+
+  db:
+    ports:
+      - "5433:5432"
+
+  redis:
+    ports:
+      - "${REDIS_PORT}:6379"
+
+  celery_worker:
+    volumes:
+      - .:/app
+
+  celery_beat:
+    volumes:
+      - .:/app
